@@ -11,7 +11,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 100,
-      "title": "ESTADO GENERAL DE TODOS LOS ROUTERS",
+      "title": "ESTADO Y DISPONIBILIDAD DE ROUTERS",
       "type": "row"
     },
     {
@@ -31,13 +31,13 @@
           }
         }
       },
-      "gridPos": { "h": 4, "w": 18, "x": 0, "y": 1 },
+      "gridPos": { "h": 6, "w": 18, "x": 0, "y": 1 },
       "id": 1,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
-        "orientation": "horizontal",
+        "orientation": "auto",
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "value_and_name"
       },
@@ -67,7 +67,7 @@
           }
         }
       },
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 1 },
       "id": 3,
       "options": {
         "colorMode": "background",
@@ -75,14 +75,14 @@
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
+        "textMode": "value_and_name"
       },
       "pluginVersion": "11.1.0",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
           "expr": "count(mikrotik_interface_running == 0) or vector(0)",
-          "legendFormat": "Interfaces DOWN",
+          "legendFormat": "Interfaces Caídas",
           "refId": "A"
         }
       ],
@@ -91,9 +91,9 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
       "id": 104,
-      "title": "SALUD DEL HARDWARE: CPU Y TEMPERATURAS EN TIEMPO REAL",
+      "title": "SALUD DEL HARDWARE (CPU, TEMPERATURAS Y MEMORIA)",
       "type": "row"
     },
     {
@@ -107,24 +107,21 @@
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 60 },
-              { "color": "red", "value": 85 }
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 80 }
             ]
           },
           "unit": "percent"
         }
       },
-      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 6 },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 8 },
       "id": 40,
       "options": {
-        "displayMode": "gradient",
-        "minVizHeight": 10,
-        "minVizWidth": 0,
-        "namePlacement": "auto",
-        "orientation": "horizontal",
+        "orientation": "auto",
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "showUnfilled": true,
-        "valueMode": "color"
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "text": { "valueSize": 20 }
       },
       "pluginVersion": "11.1.0",
       "targets": [
@@ -136,7 +133,7 @@
         }
       ],
       "title": "Carga de CPU (%)",
-      "type": "bargauge"
+      "type": "gauge"
     },
     {
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
@@ -154,13 +151,13 @@
           "unit": "celsius"
         }
       },
-      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 6 },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 8 },
       "id": 41,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
-        "orientation": "horizontal",
+        "orientation": "auto",
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "value_and_name"
       },
@@ -192,13 +189,13 @@
           "unit": "celsius"
         }
       },
-      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 6 },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 8 },
       "id": 42,
       "options": {
         "colorMode": "background",
         "graphMode": "none",
         "justifyMode": "center",
-        "orientation": "horizontal",
+        "orientation": "auto",
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "value_and_name"
       },
@@ -233,7 +230,7 @@
           "unit": "percent"
         }
       },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 11 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
       "id": 43,
       "options": {
         "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" }
@@ -246,7 +243,7 @@
           "refId": "A"
         }
       ],
-      "title": "Histórico de Uso de CPU (%)",
+      "title": "Histórico de Carga de CPU (%)",
       "type": "timeseries"
     },
     {
@@ -266,7 +263,7 @@
           "unit": "celsius"
         }
       },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 11 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
       "id": 44,
       "options": {
         "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" }
@@ -290,7 +287,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
       "id": 101,
       "title": "TRÁFICO GLOBAL EN VIVO - TODA LA RED",
       "type": "row"
@@ -322,7 +319,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 19 },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 24 },
       "id": 10,
       "options": {
         "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom", "showLegend": true },
@@ -366,7 +363,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 19 },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 24 },
       "id": 11,
       "options": {
         "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom", "showLegend": true },
@@ -385,7 +382,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 29 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
       "id": 102,
       "title": "PANEL DE CONTROL NOC - TODAS LAS INTERFACES EN TIEMPO REAL",
       "type": "row"
@@ -411,7 +408,7 @@
           }
         ]
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 30 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 35 },
       "id": 20,
       "options": {
         "cellHeight": "sm",
@@ -450,7 +447,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 38 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 43 },
       "id": 103,
       "title": "TRÁFICO POR CADA ROUTER INDIVIDUAL (SIN SELECCIONAR NADA)",
       "type": "row"
@@ -472,7 +469,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 39 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 44 },
       "id": 31,
       "options": {
         "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom" }
@@ -511,7 +508,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 39 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 44 },
       "id": 32,
       "options": {
         "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom" }
@@ -550,7 +547,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 39 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 44 },
       "id": 33,
       "options": {
         "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom" }
@@ -589,7 +586,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 47 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 52 },
       "id": 34,
       "options": {
         "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom" }
@@ -628,7 +625,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 47 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 52 },
       "id": 35,
       "options": {
         "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom" }
@@ -667,7 +664,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 47 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 52 },
       "id": 36,
       "options": {
         "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom" }
@@ -700,5 +697,5 @@
   "timezone": "browser",
   "title": "MikroTik NOC - Monitoreo Global",
   "uid": "mikrotik-network-monitor",
-  "version": 3
+  "version": 4
 }

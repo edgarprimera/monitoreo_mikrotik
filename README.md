@@ -328,16 +328,26 @@ Para generar únicamente la de un router específico:
 python telegram_reporter.py --router BRISAS_1
 ```
 
-### 2. Programar Reportes Automáticos Periódicos
-Si deseas que el sistema envíe este reporte gráfico automáticamente cada cierto tiempo, edita tu archivo `.env`:
+### 2. Programar Horarios y Reportes Automáticos Periódicos
+Puedes programar el bot para que inicie a una hora específica del día y luego envíe los reportes cada **X minutos** dentro de una ventana de tiempo (ej. horario de oficina):
+
+Edita tu archivo `.env`:
 ```ini
-# Enviar gráficas de todos los routers cada 60 minutos (0 = desactivado / solo pruebas o alertas)
+# Enviar gráficas de todos los routers cada 60 minutos (0 = desactivado / solo manual o alertas)
 TELEGRAM_REPORT_INTERVAL_MINUTES=60
+
+# Hora de inicio diaria (HH:MM en hora de Caracas, ej: 08:00)
+TELEGRAM_REPORT_START_TIME=08:00
+
+# Hora de fin diaria (opcional, ej: 22:00. Si se omite, corre las 24 horas)
+TELEGRAM_REPORT_END_TIME=22:00
 ```
-Y recarga el contenedor con:
+Y aplica los cambios:
 ```bash
 docker compose up -d mikrotik-monitor
 ```
+
+El planificador sincroniza automáticamente los reportes con los minutos exactos (ejemplo: 08:00, 09:00, 10:00... hasta las 22:00) y se suspende durante la noche hasta las 08:00 del día siguiente.
 
 ### 3. Diagnóstico Automático en Caídas Críticas
 Cuando una interfaz definida en `ROUTER_X_CRITICAL_IFACES` pasa a estado `DOWN`, el sistema dispara automáticamente la alerta de texto y genera de inmediato la gráfica con los últimos 30 minutos de comportamiento previo a la caída para facilitar el diagnóstico.

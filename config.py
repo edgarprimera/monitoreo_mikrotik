@@ -14,6 +14,8 @@ if not PROMETHEUS_URL:
     PROMETHEUS_URL = "http://prometheus:9090" if os.path.exists("/.dockerenv") else "http://localhost:9090"
 PROMETHEUS_URL = PROMETHEUS_URL.strip().rstrip("/")
 TELEGRAM_REPORT_INTERVAL_MINUTES = int(os.getenv("TELEGRAM_REPORT_INTERVAL_MINUTES", "0"))
+TELEGRAM_REPORT_START_TIME = os.getenv("TELEGRAM_REPORT_START_TIME", "").strip()
+TELEGRAM_REPORT_END_TIME = os.getenv("TELEGRAM_REPORT_END_TIME", "").strip()
 TIMEZONE_STR = os.getenv("TZ", os.getenv("TIMEZONE", "America/Caracas")).strip()
 
 try:

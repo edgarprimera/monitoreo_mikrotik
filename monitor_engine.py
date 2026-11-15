@@ -524,19 +524,14 @@ if __name__ == "__main__":
     http_thread = threading.Thread(target=start_metrics_server, args=(EXPORTER_PORT,), daemon=True)
     http_thread.start()
 
-    # 2. Iniciar reportes periódicos de Telegram si están configurados
+    # 2. Iniciar planificador programado de Telegram si está configurado
     if TELEGRAM_REPORT_INTERVAL_MINUTES > 0:
-        def _periodic_reports():
+        def _scheduler():
             import telegram_reporter
-            logger.info(f"⏳ Reportes periódicos de Telegram con gráficas activados cada {TELEGRAM_REPORT_INTERVAL_MINUTES} min.")
-            while True:
-                time.sleep(TELEGRAM_REPORT_INTERVAL_MINUTES * 60)
-                try:
-                    telegram_reporter.run_report()
-                except Exception as e:
-                    logger.error(f"Error en reporte periódico de Telegram: {e}")
+            telegram_reporter.start_report_scheduler(only_wan=True)
 
-        threading.Thread(target=_periodic_reports, daemon=True).start()
+        sched_thread = threading.Thread(target=_scheduler, daemon=True)
+        sched_thread.start()
 
     # 3. Iniciar colector en el hilo principal
     try:

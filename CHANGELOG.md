@@ -6,6 +6,17 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.4.3] - 2026-11-15
+
+### Añadido
+- **Planificador Inteligente de Horarios para Reportes en Telegram:**
+  - Variables de control `TELEGRAM_REPORT_START_TIME` (hora de inicio) y `TELEGRAM_REPORT_END_TIME` (hora de fin) en `.env`.
+  - Algoritmo de sincronización horaria exacta que alinea los disparos periódicos a horas y minutos en punto (ej. 08:00, 09:00, 10:00... cada X minutos).
+  - Suspensión nocturna automática: el bot suspende el envío de gráficas fuera de la ventana operativa y reanuda a la hora de inicio del día siguiente (manteniendo activas las alertas críticas 24/7).
+  - Parámetros de línea de comandos en `telegram_reporter.py` para planificador independiente (`--schedule`, `--start`, `--end`, `--interval`).
+
+---
+
 ## [1.4.2] - 2026-11-15
 
 ### Añadido

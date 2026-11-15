@@ -3,7 +3,8 @@ import sys
 import time
 import argparse
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+import math
 import requests
 
 import matplotlib
@@ -15,6 +16,10 @@ from config import (
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID,
     PROMETHEUS_URL,
+    TELEGRAM_REPORT_INTERVAL_MINUTES,
+    TELEGRAM_REPORT_START_TIME,
+    TELEGRAM_REPORT_END_TIME,
+    APP_TIMEZONE,
     obtener_routers,
     get_current_time_str,
     timestamp_to_datetime,
@@ -380,20 +385,152 @@ def run_report(target_router: str = None, window_minutes: int = 30, only_wan: bo
     logger.info(f"Finalizado: {generados} gráficas WAN generadas, {enviados} enviadas a Telegram.")
 
 
+def calculate_next_report_time(
+    start_time_str: str = None,
+    end_time_str: str = None,
+    interval_minutes: int = None,
+    from_dt: datetime = None,
+) -> tuple[datetime, float]:
+    """
+    Calcula la próxima fecha/hora exacta de reporte y los segundos de espera restantes.
+    Sincroniza los envíos con intervalos exactos (ej. 08:00, 09:00, 10:00).
+    """
+    if start_time_str is None:
+        start_time_str = TELEGRAM_REPORT_START_TIME
+    if end_time_str is None:
+        end_time_str = TELEGRAM_REPORT_END_TIME
+    if interval_minutes is None:
+        interval_minutes = TELEGRAM_REPORT_INTERVAL_MINUTES
+
+    if from_dt is None:
+        from_dt = datetime.now(APP_TIMEZONE) if APP_TIMEZONE else datetime.now()
+
+    if interval_minutes <= 0:
+        return from_dt, 0.0
+
+    interval_sec = interval_minutes * 60
+
+    # Si no se definió hora de inicio, el siguiente reporte es ahora + intervalo
+    if not start_time_str:
+        next_dt = from_dt + timedelta(seconds=interval_sec)
+        return next_dt, max(0.0, (next_dt - from_dt).total_seconds())
+
+    # Parsear hora de inicio (HH:MM)
+    try:
+        sh, sm = map(int, start_time_str.split(":"))
+    except ValueError:
+        sh, sm = 8, 0
+
+    start_today = from_dt.replace(hour=sh, minute=sm, second=0, microsecond=0)
+
+    # Parsear hora de fin si existe (HH:MM)
+    end_today = None
+    if end_time_str:
+        try:
+            eh, em = map(int, end_time_str.split(":"))
+            end_today = from_dt.replace(hour=eh, minute=em, second=0, microsecond=0)
+        except ValueError:
+            end_today = None
+
+    # Caso 1: Aún no llega la hora de inicio de hoy
+    if from_dt < start_today:
+        return start_today, max(0.0, (start_today - from_dt).total_seconds())
+
+    # Caso 2: Ya pasó la hora de inicio de hoy, calcular el siguiente slot
+    elapsed_sec = (from_dt - start_today).total_seconds()
+    slots_passed = math.floor(elapsed_sec / interval_sec)
+    next_slot = start_today + timedelta(seconds=(slots_passed + 1) * interval_sec)
+
+    # Caso 3: Si hay hora de fin y el próximo slot supera la hora de fin
+    if end_today and next_slot > end_today:
+        # Se reprograma para la hora de inicio de mañana
+        next_slot = start_today + timedelta(days=1)
+
+    wait_sec = max(0.0, (next_slot - from_dt).total_seconds())
+    return next_slot, wait_sec
+
+
+def start_report_scheduler(
+    target_router: str = None,
+    window_minutes: int = 30,
+    only_wan: bool = True,
+    interval_minutes: int = None,
+    start_time_str: str = None,
+    end_time_str: str = None,
+):
+    """
+    Bucle planificador inteligente para envío periódico de gráficas.
+    Respeta la hora de inicio (ej. 08:00), intervalo (ej. 60 min) y hora de fin opcional (ej. 22:00).
+    """
+    interval = interval_minutes if interval_minutes is not None else TELEGRAM_REPORT_INTERVAL_MINUTES
+    start_t = start_time_str if start_time_str is not None else TELEGRAM_REPORT_START_TIME
+    end_t = end_time_str if end_time_str is not None else TELEGRAM_REPORT_END_TIME
+
+    if interval <= 0:
+        logger.warning("Planificador detenido: el intervalo de minutos debe ser mayor a 0.")
+        return
+
+    tz_name = getattr(APP_TIMEZONE, "key", "Local")
+    logger.info("==================================================")
+    logger.info("📅 INICIANDO PLANIFICADOR PROGRAMADO DE TELEGRAM")
+    logger.info(f"   • Zona Horaria: {tz_name}")
+    logger.info(f"   • Hora de Inicio Diaria: {start_t or 'Inmediato'}")
+    logger.info(f"   • Hora de Fin Diaria: {end_t or 'Continuo 24 Horas'}")
+    logger.info(f"   • Intervalo: Cada {interval} minutos")
+    logger.info("==================================================")
+
+    while True:
+        next_dt, wait_sec = calculate_next_report_time(
+            start_time_str=start_t,
+            end_time_str=end_t,
+            interval_minutes=interval,
+        )
+        wait_min = wait_sec / 60.0
+        logger.info(f"⏳ Próximo reporte programado: {next_dt.strftime('%Y-%m-%d %H:%M:%S')} (en {wait_min:.1f} min)")
+
+        # Dormir en bloques pequeños de hasta 10 segundos
+        while wait_sec > 0:
+            sleep_step = min(wait_sec, 10.0)
+            time.sleep(sleep_step)
+            _, wait_sec = calculate_next_report_time(
+                start_time_str=start_t,
+                end_time_str=end_t,
+                interval_minutes=interval,
+            )
+            if wait_sec <= 1.0:
+                break
+
+        logger.info(f"🚀 [HORARIO ALCANZADO] Enviando reporte programado ({get_current_time_str()})...")
+        try:
+            run_report(target_router=target_router, window_minutes=window_minutes, only_wan=only_wan)
+        except Exception as err:
+            logger.error(f"Error en envío programado: {err}")
+
+        # Pausa breve de 5 segundos antes de re-calcular el siguiente slot
+        time.sleep(5)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generador y emisor de gráficas MikroTik por router para Telegram.")
     parser.add_argument("--router", type=str, default=None, help="Nombre o ID del router específico (opcional)")
     parser.add_argument("--window", type=int, default=30, help="Ventana de tiempo en minutos (default: 30)")
-    parser.add_argument("--loop", type=int, default=0, help="Minutos entre cada reporte automático (0 = una sola vez)")
+    parser.add_argument("--interval", type=int, default=None, help="Minutos entre cada reporte (ej: 60)")
+    parser.add_argument("--start", type=str, default=None, help="Hora de inicio en formato HH:MM (ej: 08:00)")
+    parser.add_argument("--end", type=str, default=None, help="Hora de fin en formato HH:MM (ej: 22:00)")
+    parser.add_argument("--schedule", action="store_true", help="Activar modo planificador continuo respetando horario e intervalo")
     parser.add_argument("--all-ifaces", action="store_true", help="Graficar todas las interfaces monitoreadas en lugar de solo la WAN")
     args = parser.parse_args()
 
     only_wan_mode = not args.all_ifaces
 
-    if args.loop > 0:
-        logger.info(f"Modo bucle periódico activado: ejecutando cada {args.loop} minutos.")
-        while True:
-            run_report(target_router=args.router, window_minutes=args.window, only_wan=only_wan_mode)
-            time.sleep(args.loop * 60)
+    if args.schedule or (args.interval and args.interval > 0):
+        start_report_scheduler(
+            target_router=args.router,
+            window_minutes=args.window,
+            only_wan=only_wan_mode,
+            interval_minutes=args.interval,
+            start_time_str=args.start,
+            end_time_str=args.end,
+        )
     else:
         run_report(target_router=args.router, window_minutes=args.window, only_wan=only_wan_mode)

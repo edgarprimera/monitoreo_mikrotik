@@ -15,6 +15,7 @@ from config import (
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID,
     TELEGRAM_REPORT_INTERVAL_MINUTES,
+    TELEGRAM_DAILY_REPORT_TIME,
     obtener_routers,
     get_current_time_str,
 )
@@ -525,7 +526,7 @@ if __name__ == "__main__":
     http_thread.start()
 
     # 2. Iniciar planificador programado de Telegram si está configurado
-    if TELEGRAM_REPORT_INTERVAL_MINUTES > 0:
+    if TELEGRAM_REPORT_INTERVAL_MINUTES > 0 or bool(TELEGRAM_DAILY_REPORT_TIME):
         def _scheduler():
             import telegram_reporter
             telegram_reporter.start_report_scheduler(only_wan=True)

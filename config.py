@@ -9,6 +9,7 @@ EXPORTER_PORT = int(os.getenv("EXPORTER_PORT", 9177))
 CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", 10))
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+TELEGRAM_DAILY_CHAT_ID = os.getenv("TELEGRAM_DAILY_CHAT_ID", "").strip()
 PROMETHEUS_URL = os.getenv("PROMETHEUS_URL")
 if not PROMETHEUS_URL:
     PROMETHEUS_URL = "http://prometheus:9090" if os.path.exists("/.dockerenv") else "http://localhost:9090"
@@ -16,6 +17,7 @@ PROMETHEUS_URL = PROMETHEUS_URL.strip().rstrip("/")
 TELEGRAM_REPORT_INTERVAL_MINUTES = int(os.getenv("TELEGRAM_REPORT_INTERVAL_MINUTES", "0"))
 TELEGRAM_REPORT_START_TIME = os.getenv("TELEGRAM_REPORT_START_TIME", "").strip()
 TELEGRAM_REPORT_END_TIME = os.getenv("TELEGRAM_REPORT_END_TIME", "").strip()
+TELEGRAM_DAILY_REPORT_TIME = os.getenv("TELEGRAM_DAILY_REPORT_TIME", "").strip()
 TIMEZONE_STR = os.getenv("TZ", os.getenv("TIMEZONE", "America/Caracas")).strip()
 
 try:

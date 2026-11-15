@@ -15,10 +15,12 @@ import matplotlib.dates as mdates
 from config import (
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID,
+    TELEGRAM_DAILY_CHAT_ID,
     PROMETHEUS_URL,
     TELEGRAM_REPORT_INTERVAL_MINUTES,
     TELEGRAM_REPORT_START_TIME,
     TELEGRAM_REPORT_END_TIME,
+    TELEGRAM_DAILY_REPORT_TIME,
     APP_TIMEZONE,
     obtener_routers,
     get_current_time_str,
@@ -316,12 +318,13 @@ def build_router_caption(router: dict, stats: dict, only_wan: bool = True) -> st
     return caption
 
 
-def send_telegram_photo(image_path: str, caption: str) -> bool:
-    """Envía la imagen con su pie de foto formateado a Telegram."""
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+def send_telegram_photo(image_path: str, caption: str, target_chat_id: str = None) -> bool:
+    """Envía la imagen con su pie de foto formateado a Telegram (al chat general o canal diario)."""
+    chat_id = (target_chat_id or TELEGRAM_CHAT_ID).strip()
+    if not TELEGRAM_BOT_TOKEN or not chat_id:
         logger.info(
             f"[MODO LOCAL / PRUEBA]: Imagen generada en '{image_path}'\n"
-            f"(Para recibirla en Telegram, define TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID en .env)\n"
+            f"(Para recibirla en Telegram, define TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID / TELEGRAM_DAILY_CHAT_ID en .env)\n"
             f"--- Pie de Foto ---\n{caption}\n"
         )
         return False
@@ -331,19 +334,198 @@ def send_telegram_photo(image_path: str, caption: str) -> bool:
         with open(image_path, "rb") as photo_file:
             files = {"photo": (os.path.basename(image_path), photo_file, "image/png")}
             data = {
-                "chat_id": TELEGRAM_CHAT_ID,
+                "chat_id": chat_id,
                 "caption": caption,
                 "parse_mode": "Markdown",
             }
             resp = requests.post(url, data=data, files=files, timeout=20)
             if resp.status_code == 200:
-                logger.info(f"✅ Imagen enviada exitosamente a Telegram: {image_path}")
+                logger.info(f"✅ Imagen enviada exitosamente a Telegram ({chat_id}): {image_path}")
                 return True
             else:
-                logger.error(f"Error en respuesta de Telegram ({resp.status_code}): {resp.text}")
+                logger.error(f"Error en respuesta de Telegram para {chat_id} ({resp.status_code}): {resp.text}")
     except Exception as err:
-        logger.error(f"Error enviando foto a Telegram: {err}")
+        logger.error(f"Error enviando foto a Telegram ({chat_id}): {err}")
     return False
+
+
+def generate_daily_24h_chart(router: dict) -> tuple[str, dict]:
+    """
+    Genera una gráfica ejecutiva de 24 Horas para un router MikroTik enfocada en la WAN.
+    Calcula picos máximos, promedios de tráfico y volumen transferido (GB).
+    """
+    r_id = router["id"]
+    host = router["host"]
+    now = time.time()
+    start = now - 86400  # 24 horas exactas
+    target_ifaces = router.get("wan_interfaces", []) or router.get("monitor_interfaces", [])
+    wan_name = target_ifaces[0] if target_ifaces else "WAN"
+
+    # Consultar Prometheus con step de 120s (720 puntos en 24h)
+    series_rx_raw = query_prometheus_range(f'mikrotik_interface_rx_rate_bps{{router_id="{r_id}"}}', start, now, step="120s")
+    series_tx_raw = query_prometheus_range(f'mikrotik_interface_tx_rate_bps{{router_id="{r_id}"}}', start, now, step="120s")
+    series_cpu = query_prometheus_range(f'mikrotik_cpu_load_percent{{router_id="{r_id}"}}', start, now, step="120s")
+    series_temp = query_prometheus_range(f'mikrotik_temperature_celsius{{router_id="{r_id}"}}', start, now, step="120s")
+
+    series_rx = [s for s in series_rx_raw if not target_ifaces or s["metric"].get("interface") in target_ifaces]
+    series_tx = [s for s in series_tx_raw if not target_ifaces or s["metric"].get("interface") in target_ifaces]
+
+    stats = {
+        "wan_name": wan_name,
+        "max_rx": 0.0,
+        "avg_rx": 0.0,
+        "max_tx": 0.0,
+        "avg_tx": 0.0,
+        "total_gb": 0.0,
+        "max_cpu": 0.0,
+        "avg_cpu": 0.0,
+        "max_cpu_temp": "N/D",
+        "max_board_temp": "N/D",
+    }
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(11, 8.5), sharex=True)
+    fig.patch.set_facecolor("#181b1f")
+
+    for ax in (ax1, ax2, ax3):
+        ax.set_facecolor("#20242b")
+        ax.tick_params(colors="#d8d9da", labelsize=8)
+        ax.grid(True, color="#2f3542", linestyle="--", linewidth=0.6, alpha=0.8)
+        for spine in ax.spines.values():
+            spine.set_color("#3c4352")
+
+    # --- PANEL 1: TRÁFICO WAN 24 HORAS ---
+    rx_bytes_total = 0.0
+    for s in series_rx:
+        times = [timestamp_to_datetime(float(v[0])) for v in s["values"]]
+        mbps = [float(v[1]) / 1e6 for v in s["values"]]
+        if mbps:
+            stats["max_rx"] = max(mbps)
+            stats["avg_rx"] = sum(mbps) / len(mbps)
+            rx_bytes_total += sum(float(v[1]) * 120.0 / 8.0 for v in s["values"])
+        ax1.plot(times, mbps, label=f"Descarga / Rx (Pico: {stats['max_rx']:.1f} Mbps | Prom: {stats['avg_rx']:.1f} Mbps)", color="#00e676", linewidth=1.8)
+        ax1.fill_between(times, mbps, color="#00e676", alpha=0.18)
+
+    tx_bytes_total = 0.0
+    for s in series_tx:
+        times = [timestamp_to_datetime(float(v[0])) for v in s["values"]]
+        mbps = [float(v[1]) / 1e6 for v in s["values"]]
+        if mbps:
+            stats["max_tx"] = max(mbps)
+            stats["avg_tx"] = sum(mbps) / len(mbps)
+            tx_bytes_total += sum(float(v[1]) * 120.0 / 8.0 for v in s["values"])
+        ax1.plot(times, mbps, label=f"Subida / Tx (Pico: {stats['max_tx']:.1f} Mbps | Prom: {stats['avg_tx']:.1f} Mbps)", color="#00b0ff", linewidth=1.8)
+        ax1.fill_between(times, mbps, color="#00b0ff", alpha=0.15)
+
+    stats["total_gb"] = (rx_bytes_total + tx_bytes_total) / 1e9
+
+    ax1.set_ylabel("Tráfico WAN (Mbps)", color="#ffffff", fontsize=9, fontweight="bold")
+    ax1.set_title(f"REPORTE DIARIO 24 HORAS: {r_id}  |  WAN: {wan_name}", color="#ffffff", fontsize=12, fontweight="bold", pad=10)
+    ax1.legend(loc="upper right", facecolor="#181b1f", edgecolor="#3c4352", labelcolor="#ffffff", fontsize=8)
+
+    # --- PANEL 2: CPU 24 HORAS ---
+    for s in series_cpu:
+        times = [timestamp_to_datetime(float(v[0])) for v in s["values"]]
+        vals = [float(v[1]) for v in s["values"]]
+        if vals:
+            stats["max_cpu"] = max(vals)
+            stats["avg_cpu"] = sum(vals) / len(vals)
+        ax2.plot(times, vals, label=f"Carga de CPU (Pico: {stats['max_cpu']:.0f}% | Prom: {stats['avg_cpu']:.1f}%)", color="#ff9100", linewidth=1.6)
+        ax2.fill_between(times, vals, color="#ff9100", alpha=0.15)
+    ax2.axhline(85, color="#ff5252", linestyle=":", label="Umbral Crítico (85%)", linewidth=1.2)
+    ax2.set_ylabel("CPU (%)", color="#ffffff", fontsize=9, fontweight="bold")
+    ax2.set_ylim(0, 100)
+    ax2.legend(loc="upper right", facecolor="#181b1f", edgecolor="#3c4352", labelcolor="#ffffff", fontsize=8)
+
+    # --- PANEL 3: TEMPERATURAS 24 HORAS ---
+    has_temp = False
+    for s in series_temp:
+        sensor = s["metric"].get("sensor", "sensor")
+        times = [timestamp_to_datetime(float(v[0])) for v in s["values"]]
+        vals = [float(v[1]) for v in s["values"]]
+        c = SENSOR_COLORS.get(sensor, "#40c4ff")
+        pico_t = max(vals) if vals else 0
+        if sensor == "cpu-temperature":
+            stats["max_cpu_temp"] = f"{pico_t:.0f}°C"
+        elif sensor in ("board-temperature1", "board-temperature"):
+            stats["max_board_temp"] = f"{pico_t:.0f}°C"
+        ax3.plot(times, vals, label=f"{sensor} (Max: {pico_t:.0f}°C)", color=c, linewidth=1.5)
+        has_temp = True
+
+    if not has_temp:
+        ax3.text(0.5, 0.5, "Sin sensores de temperatura reportados", color="#888888",
+                 ha="center", va="center", transform=ax3.transAxes, fontsize=10)
+
+    ax3.axhline(75, color="#ff5252", linestyle=":", linewidth=1.2, label="Límite Térmico (75°C)")
+    ax3.set_ylabel("Temperatura (°C)", color="#ffffff", fontsize=9, fontweight="bold")
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M\n%d-%b"))
+    ax3.legend(loc="upper right", facecolor="#181b1f", edgecolor="#3c4352", labelcolor="#ffffff", fontsize=8, ncol=3)
+
+    plt.tight_layout()
+    image_filename = f"{r_id}_24H.png"
+    image_path = os.path.join(OUTPUT_DIR, image_filename)
+    plt.savefig(image_path, dpi=120, facecolor=fig.get_facecolor(), edgecolor="none")
+    plt.close(fig)
+
+    return image_path, stats
+
+
+def build_daily_24h_caption(router: dict, stats: dict) -> str:
+    """Construye un mensaje ejecutivo de balance de 24 horas para Telegram."""
+    r_id = router["id"]
+    host = router["host"]
+    now_str = get_current_time_str()
+
+    caption = (
+        f"📊 *REPORTE DIARIO DE 24 HORAS: {r_id}*\n"
+        f"🌐 *Host:* `{host}`\n"
+        f"🌐 *Enlace WAN:* `{stats['wan_name']}`\n\n"
+        f"📈 *Consumo y Métricas WAN (24 Horas):*\n"
+        f"  • ⬇️ *Pico Descarga (Rx Max):* `{stats['max_rx']:.2f} Mbps`\n"
+        f"  • ⬇️ *Promedio Descarga (Rx Avg):* `{stats['avg_rx']:.2f} Mbps`\n"
+        f"  • ⬆️ *Pico Subida (Tx Max):* `{stats['max_tx']:.2f} Mbps`\n"
+        f"  • ⬆️ *Promedio Subida (Tx Avg):* `{stats['avg_tx']:.2f} Mbps`\n"
+        f"  • 📦 *Volumen Transferido Estimado:* `{stats['total_gb']:.2f} GB`\n\n"
+        f"⚡ *Salud de Hardware en 24h:*\n"
+        f"  • 💻 *Carga CPU:* Pico `{stats['max_cpu']:.0f}%` | Promedio `{stats['avg_cpu']:.1f}%`\n"
+        f"  • 🌡️ *Temperatura CPU Máxima:* `{stats['max_cpu_temp']}`\n"
+        f"  • 🌡️ *Temperatura Placa Máxima:* `{stats['max_board_temp']}`\n\n"
+        f"🕒 *Cierre Diario:* `{now_str}`"
+    )
+    return caption
+
+
+def run_daily_report(target_router: str = None) -> None:
+    """Ejecuta el ciclo de reporte diario de 24h y lo envía al canal/chat diario de Telegram."""
+    routers = obtener_routers()
+    if not routers:
+        logger.warning("No se encontraron routers configurados en el archivo .env.")
+        return
+
+    dest_chat = (TELEGRAM_DAILY_CHAT_ID or TELEGRAM_CHAT_ID).strip()
+    logger.info(f"Iniciando Generación de Reportes Diarios de 24 Horas (Destino: {dest_chat})...")
+
+    generados = 0
+    enviados = 0
+
+    for router in routers:
+        r_id = router["id"]
+        if target_router and r_id.lower() != target_router.lower():
+            continue
+
+        logger.info(f"Procesando reporte 24h para: {r_id} ({router['host']})...")
+        try:
+            image_path, stats = generate_daily_24h_chart(router)
+            caption = build_daily_24h_caption(router, stats)
+
+            enviado = send_telegram_photo(image_path, caption, target_chat_id=dest_chat)
+            generados += 1
+            if enviado:
+                enviados += 1
+            time.sleep(1)
+        except Exception as e:
+            logger.error(f"Error generando reporte diario para {r_id}: {e}")
+
+    logger.info(f"Finalizado Reporte Diario 24h: {generados} generadas, {enviados} enviadas a {dest_chat}.")
 
 
 def run_report(target_router: str = None, window_minutes: int = 30, only_wan: bool = True):
@@ -450,6 +632,32 @@ def calculate_next_report_time(
     return next_slot, wait_sec
 
 
+def check_and_send_daily_report(last_daily_sent_date: list):
+    """Revisa si llegó la hora del reporte diario de 24h al canal independiente."""
+    if not TELEGRAM_DAILY_REPORT_TIME:
+        return
+    now_tz = datetime.now(APP_TIMEZONE) if APP_TIMEZONE else datetime.now()
+    today_str = now_tz.strftime("%Y-%m-%d")
+    if last_daily_sent_date and last_daily_sent_date[0] == today_str:
+        return
+
+    try:
+        dh, dm = map(int, TELEGRAM_DAILY_REPORT_TIME.split(":"))
+        target_today = now_tz.replace(hour=dh, minute=dm, second=0, microsecond=0)
+    except ValueError:
+        return
+
+    # Si estamos en o superamos la hora objetivo dentro de una ventana de 5 minutos
+    diff_sec = (now_tz - target_today).total_seconds()
+    if 0 <= diff_sec <= 300:
+        logger.info(f"🌟 [HORARIO REPORTE 24H] Hora {TELEGRAM_DAILY_REPORT_TIME} alcanzada. Enviando balance diario a canal...")
+        last_daily_sent_date[0] = today_str
+        try:
+            run_daily_report()
+        except Exception as err:
+            logger.error(f"Error enviando reporte diario de 24h: {err}")
+
+
 def start_report_scheduler(
     target_router: str = None,
     window_minutes: int = 30,
@@ -460,38 +668,46 @@ def start_report_scheduler(
 ):
     """
     Bucle planificador inteligente para envío periódico de gráficas.
-    Respeta la hora de inicio (ej. 08:00), intervalo (ej. 60 min) y hora de fin opcional (ej. 22:00).
+    Gestiona tanto los reportes periódicos como el reporte diario de 24h al canal de Telegram.
     """
     interval = interval_minutes if interval_minutes is not None else TELEGRAM_REPORT_INTERVAL_MINUTES
     start_t = start_time_str if start_time_str is not None else TELEGRAM_REPORT_START_TIME
     end_t = end_time_str if end_time_str is not None else TELEGRAM_REPORT_END_TIME
 
-    if interval <= 0:
-        logger.warning("Planificador detenido: el intervalo de minutos debe ser mayor a 0.")
-        return
-
     tz_name = getattr(APP_TIMEZONE, "key", "Local")
     logger.info("==================================================")
     logger.info("📅 INICIANDO PLANIFICADOR PROGRAMADO DE TELEGRAM")
     logger.info(f"   • Zona Horaria: {tz_name}")
-    logger.info(f"   • Hora de Inicio Diaria: {start_t or 'Inmediato'}")
-    logger.info(f"   • Hora de Fin Diaria: {end_t or 'Continuo 24 Horas'}")
-    logger.info(f"   • Intervalo: Cada {interval} minutos")
+    logger.info(f"   • Reportes Periódicos: Cada {interval} min (Inicio: {start_t or 'Inmediato'}, Fin: {end_t or '24h'})")
+    logger.info(f"   • Destino Periódico: {TELEGRAM_CHAT_ID or 'No configurado'}")
+    logger.info(f"   • Reporte Diario 24h: {TELEGRAM_DAILY_REPORT_TIME or 'Desactivado'}")
+    logger.info(f"   • Destino Canal 24h: {TELEGRAM_DAILY_CHAT_ID or TELEGRAM_CHAT_ID or 'No configurado'}")
     logger.info("==================================================")
 
+    last_daily_sent = [None]
+
     while True:
+        # 1. Chequeo de reporte diario de 24 horas
+        check_and_send_daily_report(last_daily_sent)
+
+        # 2. Si no hay intervalo periódico, solo verificar periódicamente el reporte diario
+        if interval <= 0:
+            time.sleep(15)
+            continue
+
         next_dt, wait_sec = calculate_next_report_time(
             start_time_str=start_t,
             end_time_str=end_t,
             interval_minutes=interval,
         )
         wait_min = wait_sec / 60.0
-        logger.info(f"⏳ Próximo reporte programado: {next_dt.strftime('%Y-%m-%d %H:%M:%S')} (en {wait_min:.1f} min)")
+        logger.info(f"⏳ Próximo reporte periódico: {next_dt.strftime('%Y-%m-%d %H:%M:%S')} (en {wait_min:.1f} min)")
 
-        # Dormir en bloques pequeños de hasta 10 segundos
+        # Dormir en bloques pequeños de hasta 10 segundos para verificar reporte diario
         while wait_sec > 0:
             sleep_step = min(wait_sec, 10.0)
             time.sleep(sleep_step)
+            check_and_send_daily_report(last_daily_sent)
             _, wait_sec = calculate_next_report_time(
                 start_time_str=start_t,
                 end_time_str=end_t,
@@ -500,13 +716,12 @@ def start_report_scheduler(
             if wait_sec <= 1.0:
                 break
 
-        logger.info(f"🚀 [HORARIO ALCANZADO] Enviando reporte programado ({get_current_time_str()})...")
+        logger.info(f"🚀 [HORARIO ALCANZADO] Enviando reporte periódico ({get_current_time_str()})...")
         try:
             run_report(target_router=target_router, window_minutes=window_minutes, only_wan=only_wan)
         except Exception as err:
             logger.error(f"Error en envío programado: {err}")
 
-        # Pausa breve de 5 segundos antes de re-calcular el siguiente slot
         time.sleep(5)
 
 
@@ -518,12 +733,15 @@ if __name__ == "__main__":
     parser.add_argument("--start", type=str, default=None, help="Hora de inicio en formato HH:MM (ej: 08:00)")
     parser.add_argument("--end", type=str, default=None, help="Hora de fin en formato HH:MM (ej: 22:00)")
     parser.add_argument("--schedule", action="store_true", help="Activar modo planificador continuo respetando horario e intervalo")
+    parser.add_argument("--daily", action="store_true", help="Generar y enviar inmediatamente el reporte diario de 24 horas al canal de Telegram")
     parser.add_argument("--all-ifaces", action="store_true", help="Graficar todas las interfaces monitoreadas en lugar de solo la WAN")
     args = parser.parse_args()
 
     only_wan_mode = not args.all_ifaces
 
-    if args.schedule or (args.interval and args.interval > 0):
+    if args.daily:
+        run_daily_report(target_router=args.router)
+    elif args.schedule or (args.interval and args.interval > 0) or TELEGRAM_DAILY_REPORT_TIME:
         start_report_scheduler(
             target_router=args.router,
             window_minutes=args.window,

@@ -6,6 +6,22 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.5.0] - 2026-11-15
+
+### Añadido
+- **Módulo de Reportes Ejecutivos Diarios de 24 Horas:**
+  - Envío automático de balance diario de 24 horas a un canal o chat de Telegram independiente mediante `TELEGRAM_DAILY_CHAT_ID` en `.env`.
+  - Hora fija de cierre diario configurable con `TELEGRAM_DAILY_REPORT_TIME` (ej. `23:59` o `00:00`).
+  - Generación de gráficas de 24 horas con paso temporal optimizado (`120s` / 720 puntos) mostrando la curva completa de ancho de banda WAN, procesamiento y temperatura.
+  - Cálculo automático de indicadores ejecutivos diarios:
+    - Pico máximo de descarga (`Rx Max`) y subida (`Tx Max`) en Mbps.
+    - Promedio de consumo diario (`Rx Avg` y `Tx Avg`) en Mbps.
+    - Estimación de volumen total de datos transferidos en el día (GB consumidos).
+    - Pico máximo de carga de CPU y temperaturas extremas registradas.
+  - Soporte de prueba bajo demanda con el flag `--daily` en `telegram_reporter.py`.
+
+---
+
 ## [1.4.3] - 2026-11-15
 
 ### Añadido

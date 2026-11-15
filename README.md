@@ -349,7 +349,33 @@ docker compose up -d mikrotik-monitor
 
 El planificador sincroniza automáticamente los reportes con los minutos exactos (ejemplo: 08:00, 09:00, 10:00... hasta las 22:00) y se suspende durante la noche hasta las 08:00 del día siguiente.
 
-### 3. Diagnóstico Automático en Caídas Críticas
+### 3. Reporte Diario Ejecutivo de 24 Horas a Canal Independiente
+Puedes configurar el envío automático de un balance diario de 24 horas a un **canal o grupo de Telegram separado** (ideal para directivos o clientes):
+
+Edita tu archivo `.env`:
+```ini
+# ID del canal o grupo exclusivo para el reporte diario (ej. -1001234567890 o @mi_canal)
+TELEGRAM_DAILY_CHAT_ID=-1001234567890
+
+# Hora de envío del balance diario (HH:MM en hora de Caracas, ej: 23:59 o 00:00)
+TELEGRAM_DAILY_REPORT_TIME=23:59
+```
+
+Cada noche a la hora indicada, el bot enviará al canal:
+* Gráfica completa con las últimas 24 horas continuas de consumo WAN, CPU y temperatura.
+* Pico máximo de descarga y subida (`Rx Max` y `Tx Max` en Mbps).
+* Promedios de consumo diario (`Rx Avg` y `Tx Avg` en Mbps).
+* Estimación del volumen total transferido en el día (**GB consumidos**).
+* Picos de temperatura de hardware y carga máxima de procesamiento.
+
+Para probar el reporte diario inmediatamente sin esperar a la medianoche:
+```bash
+python telegram_reporter.py --daily
+# O dentro de Docker / VPS:
+docker compose exec mikrotik-monitor python telegram_reporter.py --daily
+```
+
+### 4. Diagnóstico Automático en Caídas Críticas
 Cuando una interfaz definida en `ROUTER_X_CRITICAL_IFACES` pasa a estado `DOWN`, el sistema dispara automáticamente la alerta de texto y genera de inmediato la gráfica con los últimos 30 minutos de comportamiento previo a la caída para facilitar el diagnóstico.
 
 ---

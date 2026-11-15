@@ -1,0 +1,3 @@
+python-dotenv>=1.0.0
+routeros-api>=0.21.0
+requests>=2.31.0

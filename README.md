@@ -42,11 +42,11 @@ En cada router MikroTik, crea un usuario con permisos de solo lectura para el mo
 # 1. Crear grupo de monitoreo
 /user group add name=group-monitoreo policy=read,api,test
 
-# 2. Crear usuario restringido a la IP del servidor de monitoreo (ej: 10.141.10.50)
-/user add name=usr_monitoreo group=group-monitoreo allowed-address=10.141.10.50/32 password="TuPasswordSeguro"
+# 2. Crear usuario restringido a la IP del servidor de monitoreo (ej: 192.168.88.50)
+/user add name=usr_monitoreo group=group-monitoreo allowed-address=192.168.88.50/32 password="TuPasswordSeguro"
 
 # 3. Habilitar servicio API con restricción
-/ip service set api address=10.141.10.50/32 disabled=no
+/ip service set api address=192.168.88.50/32 disabled=no
 ```
 
 ---
@@ -68,19 +68,19 @@ TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
 TELEGRAM_CHAT_ID=-1001234567890
 
 # Routers a monitorear (agrega tantos como necesites incrementando el índice)
-ROUTER_1_ID=CORE_BRISAS
-ROUTER_1_HOST=10.141.10.29
-ROUTER_1_PORT=18728
+ROUTER_1_ID=RB-CORE-01
+ROUTER_1_HOST=192.168.88.1
+ROUTER_1_PORT=8728
 ROUTER_1_USER=usr_monitoreo
-ROUTER_1_PASS=TuPasswordSeguro
+ROUTER_1_PASS=TuPasswordSeguro1
 ROUTER_1_CRITICAL_IFACES=ether1,sfp-sfpplus1
 
-ROUTER_2_ID=CORE_GUACARA
-ROUTER_2_HOST=10.141.10.1
-ROUTER_2_PORT=18728
+ROUTER_2_ID=RB-DISTRIBUCION-02
+ROUTER_2_HOST=192.168.88.2
+ROUTER_2_PORT=8728
 ROUTER_2_USER=usr_monitoreo
-ROUTER_2_PASS=TuPasswordSeguro
-ROUTER_2_CRITICAL_IFACES=sfp-sfpplus1
+ROUTER_2_PASS=TuPasswordSeguro2
+ROUTER_2_CRITICAL_IFACES=ether1,sfp-sfpplus1
 ```
 
 ---

@@ -118,6 +118,140 @@ docker compose down
 
 ---
 
+## 🌐 Guía de Despliegue en un VPS (Servidor en la Nube)
+
+Esta guía detalla los pasos para instalar y poner en producción este sistema de monitoreo en un servidor VPS remoto (Ubuntu 22.04 / 24.04 LTS o Debian 12 en DigitalOcean, Linode, AWS, Hetzner, etc.).
+
+### 1. Requisitos Mínimos del VPS
+* **Sistema Operativo:** Ubuntu 22.04 / 24.04 LTS o Debian 12.
+* **Hardware:** 1 vCPU, 1 GB RAM, 20 GB de disco SSD.
+* **Conectividad con los MikroTik:** 
+  * El VPS debe poder alcanzar los routers en sus puertos API (ej. a través de una VPN como **WireGuard** o túnel SSTP/OpenVPN, o mediante IPs públicas con *allowlist* en el firewall de RouterOS).
+
+---
+
+### 2. Actualizar el Servidor e Instalar Docker
+
+Conéctate a tu VPS por SSH y ejecuta:
+
+```bash
+# Actualizar repositorios y paquetes
+sudo apt update && sudo apt upgrade -y
+
+# Instalar dependencias básicas
+sudo apt install -y git curl ufw
+
+# Instalar Docker mediante el script oficial automatizado
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Permitir uso de Docker sin sudo para tu usuario
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Verificar instalación
+docker --version && docker compose version
+```
+
+---
+
+### 3. Seguridad y Firewall del VPS (UFW)
+
+Para evitar exponer puertos internos a internet, configura el firewall `ufw` en el VPS:
+
+```bash
+# Reglas por defecto
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+
+# Permitir SSH (¡No te quedes afuera!)
+sudo ufw allow 22/tcp
+
+# Permitir acceso al panel de Grafana
+sudo ufw allow 3000/tcp
+
+# (Opcional) Si conectas los MikroTik al VPS vía WireGuard:
+# sudo ufw allow 51820/udp
+
+# Activar firewall
+sudo ufw enable
+```
+
+> [!IMPORTANT]
+> Los puertos **9090** (Prometheus) y **9177** (Exporter Python) no deben abrirse al público en el firewall; los contenedores se comunican entre sí a través de la red privada interna de Docker.
+
+---
+
+### 4. Clonar el Proyecto y Configurar Credenciales
+
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/edgarprimera/monitoreo_mikrotik.git
+cd monitoreo_mikrotik
+
+# 2. Crear archivo de variables de entorno a partir de la plantilla
+cp .env_example .env
+
+# 3. Editar con los datos de tus routers y token de Telegram
+nano .env
+```
+*(Guarda los cambios con `Ctrl + O`, `Enter` y sal con `Ctrl + X`).*
+
+---
+
+### 5. Iniciar los Servicios en Segundo Plano
+
+Ejecuta el despliegue con Docker Compose:
+
+```bash
+docker compose up -d --build
+```
+
+Comprueba que los tres contenedores estén en estado `Up`:
+```bash
+docker compose ps
+```
+
+Verifica los logs del colector:
+```bash
+docker compose logs -f mikrotik-monitor
+```
+
+---
+
+### 6. Acceso al Panel de Grafana en el VPS
+
+Abre tu navegador e ingresa a:
+👉 **`http://IP_PUBLICA_DE_TU_VPS:3000`**
+* **Usuario:** `admin`
+* **Contraseña inicial:** `admin` *(el sistema te pedirá cambiarla en el primer inicio de sesión)*.
+
+Ve a **Dashboards** $\rightarrow$ **MikroTik NOC - Monitoreo Global** para ver el panel en vivo.
+
+---
+
+### 7. Comandos Útiles de Mantenimiento en el VPS
+
+* **Actualizar el sistema si haces cambios en GitHub:**
+  ```bash
+  git pull
+  docker compose up -d --build
+  ```
+* **Aplicar cambios tras editar el `.env`:**
+  ```bash
+  docker compose up -d mikrotik-monitor
+  ```
+* **Reiniciar todo el stack:**
+  ```bash
+  docker compose restart
+  ```
+* **Hacer un test rápido de conexión desde la terminal del VPS:**
+  ```bash
+  docker compose exec mikrotik-monitor python test_conexion.py
+  ```
+
+---
+
 ## 🧪 Ejecución Manual sin Docker
 
 ### 1. Diagnóstico Inicial de Conectividad

@@ -6,6 +6,18 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.3.1] - 2026-11-15
+
+### Añadido
+- **Guía Completa de Despliegue en VPS en `README.md`:**
+  - Requisitos mínimos de servidor (Ubuntu 22.04/24.04 LTS o Debian 12, 1 vCPU, 1 GB RAM).
+  - Script automatizado de instalación de Docker y Docker Compose.
+  - Configuración de firewall con UFW (apertura de SSH y puerto 3000 de Grafana, aislamiento de puertos internos 9090 y 9177).
+  - Instrucciones paso a paso para clonar, configurar variables de entorno `.env` e iniciar los servicios con `docker compose`.
+  - Guía de mantenimiento, comandos de actualización (`git pull`), reinicio y diagnóstico remoto.
+
+---
+
 ## [1.3.0] - 2026-11-15
 
 ### Añadido

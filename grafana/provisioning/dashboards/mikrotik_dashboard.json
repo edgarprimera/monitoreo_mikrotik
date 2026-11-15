@@ -132,7 +132,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total{type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{router_id}} - {{interface}}",
           "refId": "A"
         }
@@ -176,7 +176,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total{type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{router_id}} - {{interface}}",
           "refId": "A"
         }
@@ -225,7 +225,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "mikrotik_interface_running",
+          "expr": "mikrotik_interface_running{type!~\"(?i)vlan\"}",
           "format": "table",
           "instant": true,
           "legendFormat": "{{router_id}} - {{interface}}",

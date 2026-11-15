@@ -316,7 +316,7 @@ class PrometheusMetricsHandler(BaseHTTPRequestHandler):
                 ])
                 for (r_id, name), iface in metrics_store["interfaces"].items():
                     lines.append(
-                        f'mikrotik_interface_rx_bytes_total{{router_id="{r_id}",interface="{name}"}} {iface["rx_bytes"]}'
+                        f'mikrotik_interface_rx_bytes_total{{router_id="{r_id}",interface="{name}",type="{iface["type"]}"}} {iface["rx_bytes"]}'
                     )
 
                 lines.extend([
@@ -325,7 +325,7 @@ class PrometheusMetricsHandler(BaseHTTPRequestHandler):
                 ])
                 for (r_id, name), iface in metrics_store["interfaces"].items():
                     lines.append(
-                        f'mikrotik_interface_tx_bytes_total{{router_id="{r_id}",interface="{name}"}} {iface["tx_bytes"]}'
+                        f'mikrotik_interface_tx_bytes_total{{router_id="{r_id}",interface="{name}",type="{iface["type"]}"}} {iface["tx_bytes"]}'
                     )
 
                 lines.extend([
@@ -334,7 +334,7 @@ class PrometheusMetricsHandler(BaseHTTPRequestHandler):
                 ])
                 for (r_id, name), iface in metrics_store["interfaces"].items():
                     lines.append(
-                        f'mikrotik_interface_rx_errors_total{{router_id="{r_id}",interface="{name}"}} {iface["rx_errors"]}'
+                        f'mikrotik_interface_rx_errors_total{{router_id="{r_id}",interface="{name}",type="{iface["type"]}"}} {iface["rx_errors"]}'
                     )
 
                 lines.extend([
@@ -343,7 +343,7 @@ class PrometheusMetricsHandler(BaseHTTPRequestHandler):
                 ])
                 for (r_id, name), iface in metrics_store["interfaces"].items():
                     lines.append(
-                        f'mikrotik_interface_tx_errors_total{{router_id="{r_id}",interface="{name}"}} {iface["tx_errors"]}'
+                        f'mikrotik_interface_tx_errors_total{{router_id="{r_id}",interface="{name}",type="{iface["type"]}"}} {iface["tx_errors"]}'
                     )
 
                 lines.extend([
@@ -352,7 +352,7 @@ class PrometheusMetricsHandler(BaseHTTPRequestHandler):
                 ])
                 for (r_id, name), iface in metrics_store["interfaces"].items():
                     lines.append(
-                        f'mikrotik_interface_rx_rate_bps{{router_id="{r_id}",interface="{name}"}} {iface["rx_rate_bps"]:.2f}'
+                        f'mikrotik_interface_rx_rate_bps{{router_id="{r_id}",interface="{name}",type="{iface["type"]}"}} {iface["rx_rate_bps"]:.2f}'
                     )
 
                 lines.extend([
@@ -361,7 +361,7 @@ class PrometheusMetricsHandler(BaseHTTPRequestHandler):
                 ])
                 for (r_id, name), iface in metrics_store["interfaces"].items():
                     lines.append(
-                        f'mikrotik_interface_tx_rate_bps{{router_id="{r_id}",interface="{name}"}} {iface["tx_rate_bps"]:.2f}'
+                        f'mikrotik_interface_tx_rate_bps{{router_id="{r_id}",interface="{name}",type="{iface["type"]}"}} {iface["tx_rate_bps"]:.2f}'
                     )
 
             output = "\n".join(lines) + "\n"

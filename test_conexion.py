@@ -1,48 +1,5 @@
-import os
-import re
-from dotenv import load_dotenv
+from config import obtener_routers
 import routeros_api
-
-# Cargar variables de entorno desde .env
-load_dotenv()
-
-def obtener_routers_desde_env():
-    """Lee dinámicamente cualquier ROUTER_<N>_* definido en el archivo .env."""
-    routers = {}
-    patron = re.compile(r"^ROUTER_(\d+)_(.+)$")
-
-    for key, value in os.environ.items():
-        coincidencia = patron.match(key)
-        if coincidencia:
-            idx, campo = coincidencia.groups()
-            idx = int(idx)
-            if idx not in routers:
-                routers[idx] = {
-                    "id": f"Router-{idx}",
-                    "host": "",
-                    "port": 8728,
-                    "user": "admin",
-                    "password": "",
-                    "critical_interfaces": []
-                }
-            
-            campo = campo.lower()
-            if campo == "id":
-                routers[idx]["id"] = value
-            elif campo == "host":
-                routers[idx]["host"] = value
-            elif campo == "port":
-                routers[idx]["port"] = int(value) if value.isdigit() else 8728
-            elif campo == "user":
-                routers[idx]["user"] = value
-            elif campo == "pass" or campo == "password":
-                routers[idx]["password"] = value
-            elif campo == "critical_ifaces":
-                routers[idx]["critical_interfaces"] = [x.strip() for x in value.split(",") if x.strip()]
-
-    # Retornar lista ordenada por índice
-    return [routers[i] for i in sorted(routers.keys()) if routers[i]["host"]]
-
 
 def probar_conexion(router):
     """Intenta conectar a un router y listar sus interfaces."""
@@ -89,7 +46,7 @@ def probar_conexion(router):
 
 if __name__ == "__main__":
     print("=== TEST DE CONEXIÓN CON MIKROTIK DESDE .ENV ===")
-    routers = obtener_routers_desde_env()
+    routers = obtener_routers()
     
     if not routers:
         print(" No se encontraron routers configurados en el archivo .env")

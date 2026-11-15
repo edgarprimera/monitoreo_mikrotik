@@ -328,7 +328,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total{type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total[1m]) * 8",
           "legendFormat": "{{router_id}} - {{interface}}",
           "refId": "A"
         }
@@ -372,7 +372,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total{type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total[1m]) * 8",
           "legendFormat": "{{router_id}} - {{interface}}",
           "refId": "A"
         }
@@ -421,7 +421,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "mikrotik_interface_running{type!~\"(?i)vlan\"}",
+          "expr": "mikrotik_interface_running",
           "format": "table",
           "instant": true,
           "legendFormat": "{{router_id}} - {{interface}}",
@@ -477,13 +477,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"CORE_BRISAS\", type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"CORE_BRISAS\"}[1m]) * 8",
           "legendFormat": "{{interface}} [RX]",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"CORE_BRISAS\", type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"CORE_BRISAS\"}[1m]) * 8",
           "legendFormat": "{{interface}} [TX]",
           "refId": "B"
         }
@@ -516,13 +516,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"CORE_GUACARA\", type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"CORE_GUACARA\"}[1m]) * 8",
           "legendFormat": "{{interface}} [RX]",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"CORE_GUACARA\", type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"CORE_GUACARA\"}[1m]) * 8",
           "legendFormat": "{{interface}} [TX]",
           "refId": "B"
         }
@@ -555,13 +555,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"BRISAS_1\", type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"BRISAS_1\"}[1m]) * 8",
           "legendFormat": "{{interface}} [RX]",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"BRISAS_1\", type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"BRISAS_1\"}[1m]) * 8",
           "legendFormat": "{{interface}} [TX]",
           "refId": "B"
         }
@@ -594,13 +594,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"BRISAS_2\", type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"BRISAS_2\"}[1m]) * 8",
           "legendFormat": "{{interface}} [RX]",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"BRISAS_2\", type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"BRISAS_2\"}[1m]) * 8",
           "legendFormat": "{{interface}} [TX]",
           "refId": "B"
         }
@@ -633,13 +633,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"TRINITARIA\", type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"TRINITARIA\"}[1m]) * 8",
           "legendFormat": "{{interface}} [RX]",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"TRINITARIA\", type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"TRINITARIA\"}[1m]) * 8",
           "legendFormat": "{{interface}} [TX]",
           "refId": "B"
         }
@@ -672,13 +672,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"LPG_FIBRA\", type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"LPG_FIBRA\"}[1m]) * 8",
           "legendFormat": "{{interface}} [RX]",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"LPG_FIBRA\", type!~\"(?i)vlan\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"LPG_FIBRA\"}[1m]) * 8",
           "legendFormat": "{{interface}} [TX]",
           "refId": "B"
         }

@@ -26,7 +26,26 @@ def probar_conexion(router):
         recurso_interfaces = api.get_resource('/interface')
         interfaces = recurso_interfaces.get()
         
-        print(f" Conexión exitosa con [{r_id}]")
+        # Leer CPU y Salud
+        try:
+            res_list = api.get_resource('/system/resource').get()
+            if res_list:
+                cpu_load = res_list[0].get('cpu-load', 'N/A')
+                board = res_list[0].get('board-name', 'N/A')
+                print(f" Conexión exitosa con [{r_id}] ({board}) - CPU: {cpu_load}%")
+            else:
+                print(f" Conexión exitosa con [{r_id}]")
+        except Exception:
+            print(f" Conexión exitosa con [{r_id}]")
+
+        try:
+            health_list = api.get_resource('/system/health').get()
+            temps = [f"{item.get('name')}: {item.get('value')}°C" for item in health_list if "temp" in item.get('name', '')]
+            if temps:
+                print(f"  Temperaturas: {', '.join(temps)}")
+        except Exception:
+            pass
+
         print(f"  Total de interfaces en el equipo: {len(interfaces)}")
 
         if monitor_interfaces:

@@ -30,11 +30,12 @@ logger = logging.getLogger("MikroTikMonitor")
 # ===================================================
 data_lock = threading.Lock()
 metrics_store = {
-    "routers": {},          # {r_id: {"up": 1/0, "host": "...", "last_check": "..."}}
+    "routers": {},          # {r_id: {"up": 1/0, "host": "...", "last_check": "...", "cpu_load": int, "mem_percent": float}}
+    "health": {},           # {(r_id, sensor_name): value}
     "interfaces": {},       # {(r_id, iface_name): {...}}
 }
 state_tracker = {
-    "routers": {},          # {r_id: {"up": bool, "last_alert": timestamp}}
+    "routers": {},          # {r_id: {"up": bool, "last_alert": timestamp, "last_cpu_alert": ts, "last_temp_alert": ts}}
     "interfaces": {},       # {(r_id, iface_name): {"running": bool, "last_alert": timestamp}}
 }
 
@@ -127,25 +128,83 @@ def poll_single_router(router: dict):
         )
         api = pool.get_api()
         raw_interfaces = api.get_resource("/interface").get()
+
+        # 1. Recursos de CPU y Memoria
+        cpu_load = 0
+        mem_percent = 0.0
+        try:
+            raw_resources = api.get_resource("/system/resource").get()
+            if raw_resources:
+                r0 = raw_resources[0]
+                cpu_load = int(r0.get("cpu-load", 0))
+                total_mem = int(r0.get("total-memory", 1))
+                free_mem = int(r0.get("free-memory", 0))
+                if total_mem > 0:
+                    mem_percent = ((total_mem - free_mem) / total_mem) * 100.0
+        except Exception as e_res:
+            logger.debug(f"Error leyendo /system/resource en {r_id}: {e_res}")
+
+        # 2. Salud de Hardware (Temperaturas y Sensores)
+        health_data = {}
+        try:
+            raw_health = api.get_resource("/system/health").get()
+            if raw_health and isinstance(raw_health, list):
+                for item in raw_health:
+                    s_name = item.get("name")
+                    s_val = item.get("value")
+                    if s_name and s_val is not None:
+                        try:
+                            health_data[s_name] = float(s_val)
+                        except ValueError:
+                            pass
+            elif raw_health and isinstance(raw_health, dict):
+                for s_name, s_val in raw_health.items():
+                    try:
+                        health_data[s_name] = float(s_val)
+                    except (ValueError, TypeError):
+                        pass
+        except Exception as e_hea:
+            logger.debug(f"Error leyendo /system/health en {r_id}: {e_hea}")
+
         pool.disconnect()
 
-        # Actualizar estado de router UP
+        # Actualizar estado de router UP y recursos
         with data_lock:
             metrics_store["routers"][r_id] = {
                 "up": 1,
                 "host": host,
                 "last_check": now_str,
+                "cpu_load": cpu_load,
+                "mem_percent": mem_percent,
                 "error": None,
             }
+            for sensor_name, sensor_val in health_data.items():
+                metrics_store["health"][(r_id, sensor_name)] = sensor_val
 
         # Comprobar recuperación del router
         prev_router_state = state_tracker["routers"].get(r_id, {}).get("up", True)
         if not prev_router_state:
-            state_tracker["routers"][r_id] = {"up": True, "last_alert": now}
+            state_tracker["routers"].setdefault(r_id, {})["up"] = True
+            state_tracker["routers"][r_id]["last_alert"] = now
             msg = f"🟢 *ROUTER RESTAURADO*\n*Equipo:* `{r_id}`\n*IP:* `{host}:{port}`\n*Hora:* `{now_str}`"
             send_telegram_alert(msg)
         else:
-            state_tracker["routers"][r_id] = {"up": True, "last_alert": now}
+            state_tracker["routers"].setdefault(r_id, {})["up"] = True
+
+        # Alerta de temperatura crítica (> 75°C)
+        cpu_temp = health_data.get("cpu-temperature")
+        if cpu_temp and cpu_temp >= 75:
+            last_temp_alert = state_tracker["routers"].get(r_id, {}).get("last_temp_alert", 0)
+            if (now - last_temp_alert) > 300: # Cooldown de 5 minutos
+                state_tracker["routers"][r_id]["last_temp_alert"] = now
+                send_telegram_alert(f"🔥 *TEMPERATURA ALTA*\n*Router:* `{r_id}` ({host})\n*CPU Temp:* `{cpu_temp}°C`\n*Hora:* `{now_str}`")
+
+        # Alerta de alta carga de CPU (> 90%)
+        if cpu_load >= 90:
+            last_cpu_alert = state_tracker["routers"].get(r_id, {}).get("last_cpu_alert", 0)
+            if (now - last_cpu_alert) > 300:
+                state_tracker["routers"][r_id]["last_cpu_alert"] = now
+                send_telegram_alert(f"⚠️ *ALTA CARGA DE CPU*\n*Router:* `{r_id}` ({host})\n*Carga CPU:* `{cpu_load}%`\n*Hora:* `{now_str}`")
 
         # Procesar interfaces
         for iface in raw_interfaces:
@@ -300,6 +359,38 @@ class PrometheusMetricsHandler(BaseHTTPRequestHandler):
             with data_lock:
                 for r_id, r_info in metrics_store["routers"].items():
                     lines.append(f'mikrotik_router_up{{router_id="{r_id}",host="{r_info["host"]}"}} {r_info["up"]}')
+
+                lines.extend([
+                    "# HELP mikrotik_cpu_load_percent Carga de CPU en porcentaje (0-100)",
+                    "# TYPE mikrotik_cpu_load_percent gauge",
+                ])
+                for r_id, r_info in metrics_store["routers"].items():
+                    if "cpu_load" in r_info:
+                        lines.append(f'mikrotik_cpu_load_percent{{router_id="{r_id}",host="{r_info["host"]}"}} {r_info["cpu_load"]}')
+
+                lines.extend([
+                    "# HELP mikrotik_memory_used_percent Porcentaje de memoria RAM utilizada",
+                    "# TYPE mikrotik_memory_used_percent gauge",
+                ])
+                for r_id, r_info in metrics_store["routers"].items():
+                    if "mem_percent" in r_info:
+                        lines.append(f'mikrotik_memory_used_percent{{router_id="{r_id}",host="{r_info["host"]}"}} {r_info["mem_percent"]:.2f}')
+
+                lines.extend([
+                    "# HELP mikrotik_temperature_celsius Temperatura del hardware en grados Celsius",
+                    "# TYPE mikrotik_temperature_celsius gauge",
+                ])
+                for (r_id, sensor_name), s_val in metrics_store["health"].items():
+                    if "temp" in sensor_name.lower():
+                        lines.append(f'mikrotik_temperature_celsius{{router_id="{r_id}",sensor="{sensor_name}"}} {s_val:.1f}')
+
+                lines.extend([
+                    "# HELP mikrotik_fan_speed_rpm Velocidad de los ventiladores en RPM",
+                    "# TYPE mikrotik_fan_speed_rpm gauge",
+                ])
+                for (r_id, sensor_name), s_val in metrics_store["health"].items():
+                    if "fan" in sensor_name.lower() and "speed" in sensor_name.lower():
+                        lines.append(f'mikrotik_fan_speed_rpm{{router_id="{r_id}",fan="{sensor_name}"}} {s_val:.1f}')
 
                 lines.extend([
                     "# HELP mikrotik_interface_running Estado de enlace (1=up, 0=down)",

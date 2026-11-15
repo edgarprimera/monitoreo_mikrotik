@@ -92,6 +92,205 @@
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 104,
+      "title": "SALUD DEL HARDWARE: CPU Y TEMPERATURAS EN TIEMPO REAL",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 85 }
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 6 },
+      "id": 40,
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true,
+        "valueMode": "color"
+      },
+      "pluginVersion": "11.1.0",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "mikrotik_cpu_load_percent",
+          "legendFormat": "{{router_id}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Carga de CPU (%)",
+      "type": "bargauge"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 70 }
+            ]
+          },
+          "unit": "celsius"
+        }
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 6 },
+      "id": 41,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "11.1.0",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "mikrotik_temperature_celsius{sensor=\"cpu-temperature\"}",
+          "legendFormat": "{{router_id}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperatura de CPU (°C)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 45 },
+              { "color": "red", "value": 60 }
+            ]
+          },
+          "unit": "celsius"
+        }
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 6 },
+      "id": 42,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "11.1.0",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "mikrotik_temperature_celsius{sensor=\"board-temperature1\"}",
+          "legendFormat": "{{router_id}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperatura de Placa/Board (°C)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true
+          },
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        }
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 11 },
+      "id": 43,
+      "options": {
+        "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "mikrotik_cpu_load_percent",
+          "legendFormat": "{{router_id}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Histórico de Uso de CPU (%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true
+          },
+          "unit": "celsius"
+        }
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 11 },
+      "id": 44,
+      "options": {
+        "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "mikrotik_temperature_celsius{sensor=\"cpu-temperature\"}",
+          "legendFormat": "{{router_id}} (CPU)",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "Prometheus" },
+          "expr": "mikrotik_temperature_celsius{sensor=\"board-temperature1\"}",
+          "legendFormat": "{{router_id}} (Board)",
+          "refId": "B"
+        }
+      ],
+      "title": "Histórico de Temperaturas (°C)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
       "id": 101,
       "title": "TRÁFICO GLOBAL EN VIVO - TODA LA RED",
       "type": "row"
@@ -123,7 +322,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 6 },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 19 },
       "id": 10,
       "options": {
         "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom", "showLegend": true },
@@ -167,7 +366,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 6 },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 19 },
       "id": 11,
       "options": {
         "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom", "showLegend": true },
@@ -186,7 +385,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 29 },
       "id": 102,
       "title": "PANEL DE CONTROL NOC - TODAS LAS INTERFACES EN TIEMPO REAL",
       "type": "row"
@@ -212,7 +411,7 @@
           }
         ]
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 30 },
       "id": 20,
       "options": {
         "cellHeight": "sm",
@@ -251,7 +450,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 38 },
       "id": 103,
       "title": "TRÁFICO POR CADA ROUTER INDIVIDUAL (SIN SELECCIONAR NADA)",
       "type": "row"
@@ -273,7 +472,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 26 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 39 },
       "id": 31,
       "options": {
         "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom" }
@@ -281,13 +480,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"CORE_BRISAS\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"CORE_BRISAS\", type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{interface}} [RX]",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"CORE_BRISAS\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"CORE_BRISAS\", type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{interface}} [TX]",
           "refId": "B"
         }
@@ -312,7 +511,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 26 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 39 },
       "id": 32,
       "options": {
         "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom" }
@@ -320,13 +519,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"CORE_GUACARA\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"CORE_GUACARA\", type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{interface}} [RX]",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"CORE_GUACARA\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"CORE_GUACARA\", type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{interface}} [TX]",
           "refId": "B"
         }
@@ -351,7 +550,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 26 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 39 },
       "id": 33,
       "options": {
         "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom" }
@@ -359,13 +558,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"BRISAS_1\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"BRISAS_1\", type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{interface}} [RX]",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"BRISAS_1\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"BRISAS_1\", type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{interface}} [TX]",
           "refId": "B"
         }
@@ -390,7 +589,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 34 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 47 },
       "id": 34,
       "options": {
         "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom" }
@@ -398,13 +597,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"BRISAS_2\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"BRISAS_2\", type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{interface}} [RX]",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"BRISAS_2\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"BRISAS_2\", type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{interface}} [TX]",
           "refId": "B"
         }
@@ -429,7 +628,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 34 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 47 },
       "id": 35,
       "options": {
         "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom" }
@@ -437,13 +636,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"TRINITARIA\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"TRINITARIA\", type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{interface}} [RX]",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"TRINITARIA\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"TRINITARIA\", type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{interface}} [TX]",
           "refId": "B"
         }
@@ -468,7 +667,7 @@
           "unit": "bps"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 34 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 47 },
       "id": 36,
       "options": {
         "legend": { "calcs": ["last"], "displayMode": "table", "placement": "bottom" }
@@ -476,13 +675,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"LPG_FIBRA\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_rx_bytes_total{router_id=\"LPG_FIBRA\", type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{interface}} [RX]",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
-          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"LPG_FIBRA\"}[1m]) * 8",
+          "expr": "rate(mikrotik_interface_tx_bytes_total{router_id=\"LPG_FIBRA\", type!~\"(?i)vlan\"}[1m]) * 8",
           "legendFormat": "{{interface}} [TX]",
           "refId": "B"
         }
@@ -493,7 +692,7 @@
   ],
   "refresh": "10s",
   "schemaVersion": 39,
-  "tags": ["mikrotik", "network", "noc"],
+  "tags": ["mikrotik", "network", "noc", "health"],
   "time": { "from": "now-15m", "to": "now" },
   "timepicker": {
     "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"]
@@ -501,5 +700,5 @@
   "timezone": "browser",
   "title": "MikroTik NOC - Monitoreo Global",
   "uid": "mikrotik-network-monitor",
-  "version": 2
+  "version": 3
 }

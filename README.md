@@ -13,8 +13,11 @@ Sistema ligero, multi-hilo y escalable en Python para la monitorización en tiem
   - Tasas calculadas en tiempo real (`rx_rate_bps`, `tx_rate_bps`).
   - Errores de interfaz (`rx-error`, `tx-error`).
   - Estado del router (`up` 1/0).
+  - Carga de CPU en porcentaje (`mikrotik_cpu_load_percent`).
+  - Uso de memoria RAM en porcentaje (`mikrotik_memory_used_percent`).
+  - Sensores de temperatura de hardware (`mikrotik_temperature_celsius` para CPU, placa, SFP y switch).
 - **Dashboard JSON en Tiempo Real**: Endpoint raíz (`http://localhost:9177/`) con el estado en vivo de todos los routers.
-- **Alertas Inmediatas por Telegram**: Notificación instantánea con anti-flapping en caso de caída de enlace (*Link Down*), restauración (*Link Up*) o router inalcanzable.
+- **Alertas Inmediatas por Telegram**: Notificación instantánea con anti-flapping en caso de caída de enlace (*Link Down*), restauración (*Link Up*), router inalcanzable, alta carga de CPU (>90%) o temperatura crítica (>75°C).
 - **Ganchos de Automatización**: Hook extensible `on_critical_interface_down` para ejecutar remediación segura en interfaces críticas.
 
 ---

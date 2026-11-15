@@ -85,7 +85,34 @@ ROUTER_2_CRITICAL_IFACES=sfp-sfpplus1
 
 ---
 
-## 🧪 Pruebas y Ejecución
+## 🐳 Despliegue con Docker Compose (Recomendado)
+
+El proyecto incluye un entorno completo llave en mano con **Python Exporter**, **Prometheus** y **Grafana** (con aprovisionamiento automático de origen de datos y dashboards).
+
+### 1. Iniciar la infraestructura:
+```bash
+docker compose up -d --build
+```
+
+### 2. Puntos de acceso:
+* 📊 **Grafana:** [http://localhost:3000](http://localhost:3000) (Usuario: `admin` / Clave: `admin`)
+  - El dashboard **"MikroTik Network Interfaces Monitor"** ya viene preconfigurado con selección de routers e interfaces, tráfico Rx/Tx en Mbps y alertas.
+* 📈 **Prometheus:** [http://localhost:9090](http://localhost:9090)
+* ⚡ **Python Exporter / API:** [http://localhost:9177](http://localhost:9177) y [http://localhost:9177/metrics](http://localhost:9177/metrics)
+
+### 3. Ver logs en tiempo real:
+```bash
+docker compose logs -f mikrotik-monitor
+```
+
+### 4. Detener el stack:
+```bash
+docker compose down
+```
+
+---
+
+## 🧪 Ejecución Manual sin Docker
 
 ### 1. Diagnóstico Inicial de Conectividad
 Prueba la conexión y lista las interfaces de todos los routers configurados:

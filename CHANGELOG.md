@@ -6,6 +6,17 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.4.1] - 2026-11-15
+
+### Añadido
+- **Enfoque Exclusivo en Interfaces WAN para el Bot de Telegram:**
+  - Soporte para variables explícitas `ROUTER_X_WAN_IFACE` y `ROUTER_X_LAN_IFACES` en `.env`.
+  - Mecanismo de auto-detección inteligente: si no se especifica `WAN_IFACE`, el colector identifica automáticamente cualquier interfaz que contenga la palabra `WAN` en su nombre.
+  - Rediseño de la gráfica de tráfico del reporte: área sombreada limpia de ancho de banda para Descarga / Rx (`#00e676`) y Subida / Tx (`#00b0ff`) centrada en el enlace de salida a Internet.
+  - Opción de línea de comandos `--all-ifaces` en `telegram_reporter.py` para alternar entre reporte exclusivo de WAN o reporte global de todas las interfaces.
+
+---
+
 ## [1.4.0] - 2026-11-15
 
 ### Añadido

@@ -33,7 +33,9 @@ def obtener_routers():
                     "user": "admin",
                     "password": "",
                     "monitor_interfaces": [],
-                    "critical_interfaces": []
+                    "critical_interfaces": [],
+                    "wan_interfaces": [],
+                    "lan_interfaces": []
                 }
             
             campo = campo.lower()
@@ -51,14 +53,22 @@ def obtener_routers():
                 routers[idx]["monitor_interfaces"] = [x.strip() for x in value.split(",") if x.strip()]
             elif campo in ("critical_ifaces", "critical_interfaces"):
                 routers[idx]["critical_interfaces"] = [x.strip() for x in value.split(",") if x.strip()]
+            elif campo in ("wan_iface", "wan_ifaces", "wan_interface", "wan_interfaces", "wan"):
+                routers[idx]["wan_interfaces"] = [x.strip() for x in value.split(",") if x.strip()]
+            elif campo in ("lan_iface", "lan_ifaces", "lan_interface", "lan_interfaces", "lan"):
+                routers[idx]["lan_interfaces"] = [x.strip() for x in value.split(",") if x.strip()]
 
-    # Procesar listas por defecto: si no se especificó monitor_interfaces, usar critical_interfaces si existe
+    # Procesar listas por defecto
     resultado = []
     for i in sorted(routers.keys()):
         r = routers[i]
         if r["host"]:
             if not r["monitor_interfaces"] and r["critical_interfaces"]:
                 r["monitor_interfaces"] = list(r["critical_interfaces"])
+            # Auto-detección inteligente de interfaces WAN si no se definieron explícitamente
+            if not r["wan_interfaces"] and r["monitor_interfaces"]:
+                wan_auto = [x for x in r["monitor_interfaces"] if "wan" in x.lower()]
+                r["wan_interfaces"] = wan_auto if wan_auto else [r["monitor_interfaces"][0]]
             resultado.append(r)
 
     return resultado

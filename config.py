@@ -27,6 +27,7 @@ def obtener_routers():
                     "port": 8728,
                     "user": "admin",
                     "password": "",
+                    "monitor_interfaces": [],
                     "critical_interfaces": []
                 }
             
@@ -41,8 +42,18 @@ def obtener_routers():
                 routers[idx]["user"] = value
             elif campo in ("pass", "password"):
                 routers[idx]["password"] = value
-            elif campo == "critical_ifaces":
+            elif campo in ("monitor_ifaces", "monitor_interfaces", "ifaces"):
+                routers[idx]["monitor_interfaces"] = [x.strip() for x in value.split(",") if x.strip()]
+            elif campo in ("critical_ifaces", "critical_interfaces"):
                 routers[idx]["critical_interfaces"] = [x.strip() for x in value.split(",") if x.strip()]
 
-    # Retornar lista ordenada por índice con host válido
-    return [routers[i] for i in sorted(routers.keys()) if routers[i]["host"]]
+    # Procesar listas por defecto: si no se especificó monitor_interfaces, usar critical_interfaces si existe
+    resultado = []
+    for i in sorted(routers.keys()):
+        r = routers[i]
+        if r["host"]:
+            if not r["monitor_interfaces"] and r["critical_interfaces"]:
+                r["monitor_interfaces"] = list(r["critical_interfaces"])
+            resultado.append(r)
+
+    return resultado

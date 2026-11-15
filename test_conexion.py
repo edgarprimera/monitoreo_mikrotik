@@ -7,6 +7,7 @@ def probar_conexion(router):
     host = router["host"]
     user = router["user"]
     port = router["port"]
+    monitor_interfaces = router.get("monitor_interfaces", [])
 
     print(f"\nProbando conexión con: [{r_id}] en {host}:{port}...", flush=True)
 
@@ -26,15 +27,27 @@ def probar_conexion(router):
         interfaces = recurso_interfaces.get()
         
         print(f" Conexión exitosa con [{r_id}]")
-        print(f"  Total de interfaces detectadas: {len(interfaces)}")
-        print("  Resumen de interfaces:")
-        for iface in interfaces:
-            nombre = iface.get('name')
-            tipo = iface.get('type')
-            running = iface.get('running') == 'true'
-            disabled = iface.get('disabled') == 'true'
-            estado = "DESHABILITADA" if disabled else ("UP (Running)" if running else "DOWN")
-            print(f"    - {nombre} ({tipo}): {estado}")
+        print(f"  Total de interfaces en el equipo: {len(interfaces)}")
+
+        if monitor_interfaces:
+            print(f"  Interfaces seleccionadas en lista blanca ({len(monitor_interfaces)}):")
+            for iface in interfaces:
+                nombre = iface.get('name')
+                if nombre in monitor_interfaces:
+                    tipo = iface.get('type')
+                    running = iface.get('running') == 'true'
+                    disabled = iface.get('disabled') == 'true'
+                    estado = "DESHABILITADA" if disabled else ("UP (Running)" if running else "DOWN")
+                    print(f"    - {nombre} ({tipo}): {estado}")
+        else:
+            print("  Resumen de interfaces (todas):")
+            for iface in interfaces:
+                nombre = iface.get('name')
+                tipo = iface.get('type')
+                running = iface.get('running') == 'true'
+                disabled = iface.get('disabled') == 'true'
+                estado = "DESHABILITADA" if disabled else ("UP (Running)" if running else "DOWN")
+                print(f"    - {nombre} ({tipo}): {estado}")
             
         pool.disconnect()
         return True

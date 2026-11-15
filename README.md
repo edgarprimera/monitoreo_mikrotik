@@ -73,6 +73,8 @@ ROUTER_1_HOST=192.168.88.1
 ROUTER_1_PORT=8728
 ROUTER_1_USER=usr_monitoreo
 ROUTER_1_PASS=TuPasswordSeguro1
+# Lista blanca: SOLO se monitorean, grafican y alertan estas interfaces
+ROUTER_1_MONITOR_IFACES=ether1,sfp-sfpplus1,sfp-sfpplus2
 ROUTER_1_CRITICAL_IFACES=ether1,sfp-sfpplus1
 
 ROUTER_2_ID=RB-DISTRIBUCION-02
@@ -80,7 +82,8 @@ ROUTER_2_HOST=192.168.88.2
 ROUTER_2_PORT=8728
 ROUTER_2_USER=usr_monitoreo
 ROUTER_2_PASS=TuPasswordSeguro2
-ROUTER_2_CRITICAL_IFACES=ether1,sfp-sfpplus1
+ROUTER_2_MONITOR_IFACES=ether1,sfp-sfpplus1
+ROUTER_2_CRITICAL_IFACES=ether1
 ```
 
 ---

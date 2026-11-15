@@ -112,6 +112,7 @@ def poll_single_router(router: dict):
     user = router["user"]
     password = router["password"]
     critical_interfaces = router.get("critical_interfaces", [])
+    monitor_interfaces = router.get("monitor_interfaces", [])
     now = time.time()
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -153,7 +154,11 @@ def poll_single_router(router: dict):
             is_running = 1 if iface.get("running") == "true" else 0
             disabled = iface.get("disabled") == "true"
 
-            # Si la interfaz está deshabilitada administrativamente, no alertar
+            # LISTA BLANCA: Si se definieron interfaces específicas para este router, omitir las demás
+            if monitor_interfaces and name not in monitor_interfaces:
+                continue
+
+            # Si la interfaz está deshabilitada administrativamente, no alertar ni procesar
             if disabled:
                 continue
 

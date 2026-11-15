@@ -1,0 +1,347 @@
+import os
+import sys
+import time
+import argparse
+import logging
+from datetime import datetime
+import requests
+
+import matplotlib
+matplotlib.use("Agg")  # Backend no interactivo para servidores
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+
+from config import (
+    TELEGRAM_BOT_TOKEN,
+    TELEGRAM_CHAT_ID,
+    PROMETHEUS_URL,
+    obtener_routers,
+)
+
+# Configuración de Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("TelegramReporter")
+
+OUTPUT_DIR = "graficas_telegram"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Paleta de colores para múltiples interfaces (Dark NOC Theme)
+IFACE_COLORS = [
+    {"rx": "#00e676", "tx": "#00b0ff"},  # Verde neón / Cyan
+    {"rx": "#76ff03", "tx": "#2979ff"},  # Lima / Azul eléctrico
+    {"rx": "#ffd600", "tx": "#ff9100"},  # Amarillo / Naranja
+    {"rx": "#e040fb", "tx": "#ff4081"},  # Magenta / Rosa neón
+    {"rx": "#00e5ff", "tx": "#651fff"},  # Turquesa / Violeta
+]
+
+SENSOR_COLORS = {
+    "cpu-temperature": "#ff5252",       # Rojo coral
+    "board-temperature1": "#e040fb",    # Magenta / Violeta
+    "board-temperature2": "#b388ff",    # Lavanda
+    "switch-temperature": "#ffd600",   # Amarillo
+    "sfp-temperature": "#1de9b6",       # Verde agua
+}
+
+
+def query_prometheus_range(query: str, start: float, end: float, step: str = "15s") -> list:
+    """Ejecuta una consulta query_range a la API HTTP de Prometheus."""
+    url = f"{PROMETHEUS_URL}/api/v1/query_range"
+    try:
+        resp = requests.get(url, params={"query": query, "start": start, "end": end, "step": step}, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get("status") == "success":
+                return data.get("data", {}).get("result", [])
+    except Exception as e:
+        logger.error(f"Error consultando Prometheus ({query}): {e}")
+    return []
+
+
+def query_prometheus_instant(query: str) -> list:
+    """Ejecuta una consulta instantánea a Prometheus."""
+    url = f"{PROMETHEUS_URL}/api/v1/query"
+    try:
+        resp = requests.get(url, params={"query": query}, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get("status") == "success":
+                return data.get("data", {}).get("result", [])
+    except Exception as e:
+        logger.error(f"Error en consulta instantánea ({query}): {e}")
+    return []
+
+
+def generate_router_chart(router: dict, window_minutes: int = 30) -> str:
+    """
+    Genera una gráfica completa de alta resolución para un router MikroTik.
+    Incluye:
+      1. Tráfico de interfaces monitoreadas (Mbps Rx y Tx)
+      2. Carga de CPU (%)
+      3. Temperaturas de hardware (°C)
+    """
+    r_id = router["id"]
+    host = router["host"]
+    now = time.time()
+    start = now - (window_minutes * 60)
+    now_dt = datetime.now()
+
+    # 1. Consultar métricas en Prometheus
+    series_rx = query_prometheus_range(f'mikrotik_interface_rx_rate_bps{{router_id="{r_id}"}}', start, now)
+    series_tx = query_prometheus_range(f'mikrotik_interface_tx_rate_bps{{router_id="{r_id}"}}', start, now)
+    series_cpu = query_prometheus_range(f'mikrotik_cpu_load_percent{{router_id="{r_id}"}}', start, now)
+    series_temp = query_prometheus_range(f'mikrotik_temperature_celsius{{router_id="{r_id}"}}', start, now)
+
+    # 2. Configurar figura con estilo NOC Dark
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(11, 8.5), sharex=True)
+    fig.patch.set_facecolor("#181b1f")
+
+    for ax in (ax1, ax2, ax3):
+        ax.set_facecolor("#20242b")
+        ax.tick_params(colors="#d8d9da", labelsize=8)
+        ax.grid(True, color="#2f3542", linestyle="--", linewidth=0.6, alpha=0.8)
+        for spine in ax.spines.values():
+            spine.set_color("#3c4352")
+
+    # --- PANEL 1: TRÁFICO DE RED ---
+    # Mapear interfaces a colores consistentes
+    ifaces_seen = {}
+    color_idx = 0
+
+    # Trazar RX
+    for s in series_rx:
+        iface = s["metric"].get("interface", "iface")
+        if iface not in ifaces_seen:
+            ifaces_seen[iface] = IFACE_COLORS[color_idx % len(IFACE_COLORS)]
+            color_idx += 1
+        
+        times = [datetime.fromtimestamp(float(v[0])) for v in s["values"]]
+        mbps = [float(v[1]) / 1e6 for v in s["values"]]
+        c = ifaces_seen[iface]["rx"]
+        ax1.plot(times, mbps, label=f"{iface} (Rx / In)", color=c, linewidth=1.6)
+
+    # Trazar TX
+    for s in series_tx:
+        iface = s["metric"].get("interface", "iface")
+        if iface not in ifaces_seen:
+            ifaces_seen[iface] = IFACE_COLORS[color_idx % len(IFACE_COLORS)]
+            color_idx += 1
+        
+        times = [datetime.fromtimestamp(float(v[0])) for v in s["values"]]
+        mbps = [float(v[1]) / 1e6 for v in s["values"]]
+        c = ifaces_seen[iface]["tx"]
+        ax1.plot(times, mbps, label=f"{iface} (Tx / Out)", color=c, linewidth=1.6, linestyle="--")
+
+    ax1.set_ylabel("Tráfico (Mbps)", color="#ffffff", fontsize=9, fontweight="bold")
+    ax1.set_title(
+        f"Router: {r_id}  |  IP: {host}  |  Ventana: Últimos {window_minutes} min",
+        color="#ffffff",
+        fontsize=12,
+        fontweight="bold",
+        pad=10,
+    )
+    if ifaces_seen:
+        ax1.legend(loc="upper right", facecolor="#181b1f", edgecolor="#3c4352", labelcolor="#ffffff", fontsize=7.5, ncol=2)
+
+    # --- PANEL 2: CARGA DE CPU ---
+    for s in series_cpu:
+        times = [datetime.fromtimestamp(float(v[0])) for v in s["values"]]
+        vals = [float(v[1]) for v in s["values"]]
+        ax2.plot(times, vals, label="Carga de CPU (%)", color="#ff9100", linewidth=1.8)
+        ax2.fill_between(times, vals, color="#ff9100", alpha=0.15)
+    
+    ax2.axhline(85, color="#ff5252", linestyle=":", linewidth=1.2, label="Umbral Crítico (85%)")
+    ax2.set_ylabel("CPU (%)", color="#ffffff", fontsize=9, fontweight="bold")
+    ax2.set_ylim(0, 100)
+    ax2.legend(loc="upper right", facecolor="#181b1f", edgecolor="#3c4352", labelcolor="#ffffff", fontsize=7.5)
+
+    # --- PANEL 3: TEMPERATURAS ---
+    has_temp = False
+    for s in series_temp:
+        sensor = s["metric"].get("sensor", "sensor")
+        times = [datetime.fromtimestamp(float(v[0])) for v in s["values"]]
+        vals = [float(v[1]) for v in s["values"]]
+        c = SENSOR_COLORS.get(sensor, "#40c4ff")
+        ax3.plot(times, vals, label=f"{sensor} (°C)", color=c, linewidth=1.6)
+        has_temp = True
+
+    if not has_temp:
+        ax3.text(0.5, 0.5, "Sin sensores de temperatura reportados", color="#888888",
+                 ha="center", va="center", transform=ax3.transAxes, fontsize=10)
+
+    ax3.axhline(75, color="#ff5252", linestyle=":", linewidth=1.2, label="Límite Térmico (75°C)")
+    ax3.set_ylabel("Temperatura (°C)", color="#ffffff", fontsize=9, fontweight="bold")
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+    ax3.legend(loc="upper right", facecolor="#181b1f", edgecolor="#3c4352", labelcolor="#ffffff", fontsize=7.5, ncol=3)
+
+    plt.tight_layout()
+
+    # Guardar imagen
+    image_filename = f"{r_id}.png"
+    image_path = os.path.join(OUTPUT_DIR, image_filename)
+    plt.savefig(image_path, dpi=120, facecolor=fig.get_facecolor(), edgecolor="none")
+    plt.close(fig)
+
+    return image_path
+
+
+def get_current_router_stats(r_id: str) -> dict:
+    """Obtiene los valores actuales instantáneos de CPU, temperatura y tráfico del router."""
+    stats = {
+        "cpu_load": 0,
+        "mem_percent": 0.0,
+        "cpu_temp": "N/D",
+        "board_temp": "N/D",
+        "traffic": {},  # {iface: {"rx_mbps": float, "tx_mbps": float}}
+    }
+
+    # CPU
+    res_cpu = query_prometheus_instant(f'mikrotik_cpu_load_percent{{router_id="{r_id}"}}')
+    if res_cpu:
+        stats["cpu_load"] = int(float(res_cpu[0]["value"][1]))
+
+    # Memoria
+    res_mem = query_prometheus_instant(f'mikrotik_memory_used_percent{{router_id="{r_id}"}}')
+    if res_mem:
+        stats["mem_percent"] = round(float(res_mem[0]["value"][1]), 1)
+
+    # Temperaturas
+    res_temp = query_prometheus_instant(f'mikrotik_temperature_celsius{{router_id="{r_id}"}}')
+    for s in res_temp:
+        sensor = s["metric"].get("sensor")
+        val = round(float(s["value"][1]), 1)
+        if sensor == "cpu-temperature":
+            stats["cpu_temp"] = f"{val}°C"
+        elif sensor in ("board-temperature1", "board-temperature"):
+            stats["board_temp"] = f"{val}°C"
+
+    # Tráfico actual
+    res_rx = query_prometheus_instant(f'mikrotik_interface_rx_rate_bps{{router_id="{r_id}"}}')
+    for s in res_rx:
+        iface = s["metric"].get("interface")
+        rx_mbps = round(float(s["value"][1]) / 1e6, 2)
+        if iface not in stats["traffic"]:
+            stats["traffic"][iface] = {"rx_mbps": rx_mbps, "tx_mbps": 0.0}
+        else:
+            stats["traffic"][iface]["rx_mbps"] = rx_mbps
+
+    res_tx = query_prometheus_instant(f'mikrotik_interface_tx_rate_bps{{router_id="{r_id}"}}')
+    for s in res_tx:
+        iface = s["metric"].get("interface")
+        tx_mbps = round(float(s["value"][1]) / 1e6, 2)
+        if iface not in stats["traffic"]:
+            stats["traffic"][iface] = {"rx_mbps": 0.0, "tx_mbps": tx_mbps}
+        else:
+            stats["traffic"][iface]["tx_mbps"] = tx_mbps
+
+    return stats
+
+
+def build_router_caption(router: dict, stats: dict) -> str:
+    """Construye un mensaje explicativo y elegante en Markdown para acompañar la imagen."""
+    r_id = router["id"]
+    host = router["host"]
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    lineas_trafico = []
+    if stats["traffic"]:
+        for iface, rates in stats["traffic"].items():
+            lineas_trafico.append(f"  • `{iface}`: ⬇️ `{rates['rx_mbps']} Mbps` | ⬆️ `{rates['tx_mbps']} Mbps`")
+    else:
+        lineas_trafico.append("  • _Sin tráfico reportado en este instante_")
+
+    caption = (
+        f"📊 *REPORTE DE ESTADO - {r_id}*\n"
+        f"🌐 *Host:* `{host}`\n"
+        f"⚡ *CPU:* `{stats['cpu_load']}%` | 💾 *RAM:* `{stats['mem_percent']}%`\n"
+        f"🌡️ *Temp CPU:* `{stats['cpu_temp']}` | *Placa:* `{stats['board_temp']}`\n"
+        f"📡 *Tráfico Actual por Interfaz:*\n"
+        + "\n".join(lineas_trafico) + "\n"
+        f"🕒 *Hora:* `{now_str}`"
+    )
+    return caption
+
+
+def send_telegram_photo(image_path: str, caption: str) -> bool:
+    """Envía la imagen con su pie de foto formateado a Telegram."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        logger.info(
+            f"[MODO LOCAL / PRUEBA]: Imagen generada en '{image_path}'\n"
+            f"(Para recibirla en Telegram, define TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID en .env)\n"
+            f"--- Pie de Foto ---\n{caption}\n"
+        )
+        return False
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+    try:
+        with open(image_path, "rb") as photo_file:
+            files = {"photo": (os.path.basename(image_path), photo_file, "image/png")}
+            data = {
+                "chat_id": TELEGRAM_CHAT_ID,
+                "caption": caption,
+                "parse_mode": "Markdown",
+            }
+            resp = requests.post(url, data=data, files=files, timeout=20)
+            if resp.status_code == 200:
+                logger.info(f"✅ Imagen enviada exitosamente a Telegram: {image_path}")
+                return True
+            else:
+                logger.error(f"Error en respuesta de Telegram ({resp.status_code}): {resp.text}")
+    except Exception as err:
+        logger.error(f"Error enviando foto a Telegram: {err}")
+    return False
+
+
+def run_report(target_router: str = None, window_minutes: int = 30):
+    """Ejecuta el ciclo de reporte generando y enviando una imagen por router."""
+    routers = obtener_routers()
+    if not routers:
+        logger.warning("No se encontraron routers configurados en el archivo .env.")
+        return
+
+    logger.info(f"Iniciando generación de reportes con gráficas (Ventana: {window_minutes} min)...")
+
+    generados = 0
+    enviados = 0
+
+    for router in routers:
+        r_id = router["id"]
+        if target_router and r_id.lower() != target_router.lower():
+            continue
+
+        logger.info(f"Procesando router: {r_id} ({router['host']})...")
+        try:
+            image_path = generate_router_chart(router, window_minutes=window_minutes)
+            stats = get_current_router_stats(r_id)
+            caption = build_router_caption(router, stats)
+
+            enviado = send_telegram_photo(image_path, caption)
+            generados += 1
+            if enviado:
+                enviados += 1
+            
+            # Pausa breve para no saturar rate-limits de Telegram
+            time.sleep(1)
+        except Exception as e:
+            logger.error(f"Error generando reporte para {r_id}: {e}")
+
+    logger.info(f"Finalizado: {generados} gráficas generadas, {enviados} enviadas a Telegram.")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Generador y emisor de gráficas MikroTik por router para Telegram.")
+    parser.add_argument("--router", type=str, default=None, help="Nombre o ID del router específico (opcional)")
+    parser.add_argument("--window", type=int, default=30, help="Ventana de tiempo en minutos (default: 30)")
+    parser.add_argument("--loop", type=int, default=0, help="Minutos entre cada reporte automático (0 = una sola vez)")
+    args = parser.parse_args()
+
+    if args.loop > 0:
+        logger.info(f"Modo bucle periódico activado: ejecutando cada {args.loop} minutos.")
+        while True:
+            run_report(target_router=args.router, window_minutes=args.window)
+            time.sleep(args.loop * 60)
+    else:
+        run_report(target_router=args.router, window_minutes=args.window)

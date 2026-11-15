@@ -304,6 +304,46 @@ scrape_configs:
 
 ---
 
+## 📸 Reportes con Gráficas por Router en Telegram (`telegram_reporter.py`)
+
+El sistema incluye un generador nativo de diagnósticos gráficos que consulta Prometheus y envía a Telegram una imagen de alta resolución (estilo NOC Dark) por cada router con su resumen técnico en vivo.
+
+Cada gráfica incluye 3 subplots sincronizados:
+1. **Tráfico de Interfaces Monitoreadas (Mbps):** Líneas de entrada (Rx ⬇️) y salida (Tx ⬆️) con colores independientes por enlace.
+2. **Carga de CPU (%):** Evolución temporal con sombreado y línea de umbral crítico al 85%.
+3. **Sensores de Temperatura (°C):** Registro térmico de CPU, placa, switch y módulos SFP con límite al 75°C.
+
+### 1. Ejecutar Prueba Manual Bajo Demanda
+Genera y envía las gráficas de todos los routers a Telegram:
+```bash
+# En el host local o VPS
+python telegram_reporter.py
+
+# O directamente dentro del contenedor Docker:
+docker compose exec mikrotik-monitor python telegram_reporter.py
+```
+
+Para generar únicamente la de un router específico:
+```bash
+python telegram_reporter.py --router BRISAS_1
+```
+
+### 2. Programar Reportes Automáticos Periódicos
+Si deseas que el sistema envíe este reporte gráfico automáticamente cada cierto tiempo, edita tu archivo `.env`:
+```ini
+# Enviar gráficas de todos los routers cada 60 minutos (0 = desactivado / solo pruebas o alertas)
+TELEGRAM_REPORT_INTERVAL_MINUTES=60
+```
+Y recarga el contenedor con:
+```bash
+docker compose up -d mikrotik-monitor
+```
+
+### 3. Diagnóstico Automático en Caídas Críticas
+Cuando una interfaz definida en `ROUTER_X_CRITICAL_IFACES` pasa a estado `DOWN`, el sistema dispara automáticamente la alerta de texto y genera de inmediato la gráfica con los últimos 30 minutos de comportamiento previo a la caída para facilitar el diagnóstico.
+
+---
+
 ## 📁 Estructura del Proyecto
 
 ```text

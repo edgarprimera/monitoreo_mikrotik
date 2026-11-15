@@ -18,6 +18,7 @@ ENV/
 
 # Logs y temporales
 *.log
+graficas_telegram/
 .vscode/
 .idea/
 .agents/

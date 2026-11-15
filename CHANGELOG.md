@@ -6,6 +6,20 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.4.0] - 2026-11-15
+
+### Añadido
+- **Reportes con Gráficas de Diagnóstico por Router para Telegram (`telegram_reporter.py`):**
+  - Generador de imágenes de alta resolución (1200x850 px) con estilo NOC Dark por cada router MikroTik.
+  - Subplots individuales: Tráfico en tiempo real por interfaz monitoreada (Mbps Rx y Tx con colores contrastantes), Carga de CPU (%) con área sombreada y umbral de alerta (85%), y Sensores de Temperatura (°C) para CPU, placa, switch y módulos SFP.
+  - Envío automático mediante la API de Telegram Bot (`sendPhoto`) con pie de foto enriquecido en Markdown (IP, CPU, RAM, temperaturas y tasas de tráfico en vivo).
+  - Soporte de ejecución manual de prueba bajo demanda: `python telegram_reporter.py` (o `--router <ID>`).
+  - Configuración flexible de reportes periódicos mediante la variable `TELEGRAM_REPORT_INTERVAL_MINUTES` en `.env` (desactivado por defecto `0` para modo de prueba).
+  - Integración en el hook de fallas críticas: envío automático de la gráfica de diagnóstico del router cuando una interfaz crítica pasa a estado DOWN.
+  - Inclusión de dependencias de renderizado gráfico (`matplotlib`, `contourpy`, `kiwisolver`, etc.) en la carpeta `wheels/` para preservación de construcción 100% offline.
+
+---
+
 ## [1.3.1] - 2026-11-15
 
 ### Añadido

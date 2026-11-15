@@ -14,6 +14,7 @@ from config import (
     CHECK_INTERVAL_SECONDS,
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID,
+    TELEGRAM_REPORT_INTERVAL_MINUTES,
     obtener_routers,
 )
 
@@ -74,12 +75,13 @@ def send_telegram_alert(message: str):
 def on_critical_interface_down(router: dict, iface_name: str):
     """
     Se ejecuta automáticamente cuando una interfaz crítica pasa a estado DOWN.
-    Aquí puedes agregar comandos de remediación en MikroTik o llamadas a APIs externas.
+    1. Registra un log de advertencia en RouterOS.
+    2. Envía automáticamente una gráfica de diagnóstico del router a Telegram.
     """
     r_id = router["id"]
     logger.warning(f"⚠️ [AUTOMATIZACIÓN] Ejecutando acción por caída de interfaz crítica {iface_name} en {r_id}")
     
-    # Ejemplo: Registrar un log de advertencia directamente en el router MikroTik
+    # 1. Registrar un log de advertencia directamente en el router MikroTik
     def _remediate():
         try:
             pool = routeros_api.RouterOsApiPool(
@@ -99,7 +101,25 @@ def on_critical_interface_down(router: dict, iface_name: str):
         except Exception as e:
             logger.error(f"No se pudo ejecutar remediación en {r_id}: {e}")
 
+    # 2. Generar y enviar gráfica de diagnóstico por Telegram
+    def _send_chart():
+        try:
+            import telegram_reporter
+            image_path = telegram_reporter.generate_router_chart(router, window_minutes=30)
+            stats = telegram_reporter.get_current_router_stats(r_id)
+            caption = (
+                f"🚨 *DIAGNÓSTICO DE CAÍDA CRÍTICA*\n"
+                f"*Router:* `{r_id}` ({router['host']})\n"
+                f"*Interfaz Afectada:* `{iface_name}` (DOWN)\n"
+                f"⚡ *CPU:* `{stats['cpu_load']}%` | 🌡️ *Temp:* `{stats['cpu_temp']}`\n"
+                f"🕒 *Hora:* `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`"
+            )
+            telegram_reporter.send_telegram_photo(image_path, caption)
+        except Exception as e:
+            logger.error(f"No se pudo enviar gráfica de diagnóstico para {r_id}: {e}")
+
     threading.Thread(target=_remediate, daemon=True).start()
+    threading.Thread(target=_send_chart, daemon=True).start()
 
 
 # ===================================================
@@ -503,7 +523,21 @@ if __name__ == "__main__":
     http_thread = threading.Thread(target=start_metrics_server, args=(EXPORTER_PORT,), daemon=True)
     http_thread.start()
 
-    # 2. Iniciar colector en el hilo principal
+    # 2. Iniciar reportes periódicos de Telegram si están configurados
+    if TELEGRAM_REPORT_INTERVAL_MINUTES > 0:
+        def _periodic_reports():
+            import telegram_reporter
+            logger.info(f"⏳ Reportes periódicos de Telegram con gráficas activados cada {TELEGRAM_REPORT_INTERVAL_MINUTES} min.")
+            while True:
+                time.sleep(TELEGRAM_REPORT_INTERVAL_MINUTES * 60)
+                try:
+                    telegram_reporter.run_report()
+                except Exception as e:
+                    logger.error(f"Error en reporte periódico de Telegram: {e}")
+
+        threading.Thread(target=_periodic_reports, daemon=True).start()
+
+    # 3. Iniciar colector en el hilo principal
     try:
         poller_worker()
     except KeyboardInterrupt:

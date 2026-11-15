@@ -10,7 +10,7 @@ COPY wheels /wheels
 RUN pip install --no-cache-dir --no-index --find-links=/wheels /wheels/*.whl && rm -rf /wheels
 
 # Copiar el código de la aplicación
-COPY config.py monitor_engine.py ./
+COPY config.py monitor_engine.py telegram_reporter.py ./
 
 # Exponer el puerto del exporter de métricas
 EXPOSE 9177

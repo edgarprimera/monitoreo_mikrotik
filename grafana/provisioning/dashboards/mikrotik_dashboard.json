@@ -239,7 +239,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
           "expr": "mikrotik_cpu_load_percent",
-          "legendFormat": "{{router_id}}",
+          "legendFormat": "{{router_id}} (CPU)",
           "refId": "A"
         }
       ],
@@ -272,13 +272,13 @@
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
           "expr": "mikrotik_temperature_celsius{sensor=\"cpu-temperature\"}",
-          "legendFormat": "{{router_id}} (CPU)",
+          "legendFormat": "{{router_id}} (°C)",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "Prometheus" },
           "expr": "mikrotik_temperature_celsius{sensor=\"board-temperature1\"}",
-          "legendFormat": "{{router_id}} (Board)",
+          "legendFormat": "{{router_id}} - Placa (°C)",
           "refId": "B"
         }
       ],

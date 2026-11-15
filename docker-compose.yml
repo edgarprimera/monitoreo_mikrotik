@@ -11,6 +11,8 @@ services:
       - .env
     ports:
       - "9177:9177"
+    volumes:
+      - ./graficas_telegram:/app/graficas_telegram
     networks:
       - monitoring
 

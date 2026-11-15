@@ -6,6 +6,16 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.4.2] - 2026-11-15
+
+### Añadido
+- **Soporte de Zona Horaria Nativa (`America/Caracas`):**
+  - Configuración centralizada de zona horaria mediante `TZ=America/Caracas` en `.env` y `docker-compose.yml`.
+  - Normalización en Python con `zoneinfo.ZoneInfo` para garantizar que todas las alertas de Telegram, pies de foto y los ejes temporales (`HH:MM`) de las gráficas reflejen con total exactitud la hora de Caracas (VET, UTC-4).
+  - Inclusión de variables de entorno de zona horaria en Prometheus y Grafana (`GF_DATE_FORMATS_DEFAULT_TIMEZONE=America/Caracas`).
+
+---
+
 ## [1.4.1] - 2026-11-15
 
 ### Añadido

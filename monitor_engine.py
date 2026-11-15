@@ -16,6 +16,7 @@ from config import (
     TELEGRAM_CHAT_ID,
     TELEGRAM_REPORT_INTERVAL_MINUTES,
     obtener_routers,
+    get_current_time_str,
 )
 
 # Configuración de Logging
@@ -112,7 +113,7 @@ def on_critical_interface_down(router: dict, iface_name: str):
                 f"*Router:* `{r_id}` ({router['host']})\n"
                 f"*Interfaz Afectada:* `{iface_name}` (DOWN)\n"
                 f"⚡ *CPU:* `{stats['cpu_load']}%` | 🌡️ *Temp:* `{stats['cpu_temp']}`\n"
-                f"🕒 *Hora:* `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`"
+                f"🕒 *Hora:* `{get_current_time_str()}`"
             )
             telegram_reporter.send_telegram_photo(image_path, caption)
         except Exception as e:
@@ -135,7 +136,7 @@ def poll_single_router(router: dict):
     critical_interfaces = router.get("critical_interfaces", [])
     monitor_interfaces = router.get("monitor_interfaces", [])
     now = time.time()
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = get_current_time_str()
 
     try:
         pool = routeros_api.RouterOsApiPool(

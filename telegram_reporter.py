@@ -16,6 +16,8 @@ from config import (
     TELEGRAM_CHAT_ID,
     PROMETHEUS_URL,
     obtener_routers,
+    get_current_time_str,
+    timestamp_to_datetime,
 )
 
 # Configuración de Logging
@@ -126,14 +128,14 @@ def generate_router_chart(router: dict, window_minutes: int = 30, only_wan: bool
         has_wan_tx = False
 
         for s in series_rx:
-            times = [datetime.fromtimestamp(float(v[0])) for v in s["values"]]
+            times = [timestamp_to_datetime(float(v[0])) for v in s["values"]]
             mbps = [float(v[1]) / 1e6 for v in s["values"]]
             ax1.plot(times, mbps, label="WAN Descarga / Rx (Mbps)", color="#00e676", linewidth=2.0)
             ax1.fill_between(times, mbps, color="#00e676", alpha=0.18)
             has_wan_rx = True
 
         for s in series_tx:
-            times = [datetime.fromtimestamp(float(v[0])) for v in s["values"]]
+            times = [timestamp_to_datetime(float(v[0])) for v in s["values"]]
             mbps = [float(v[1]) / 1e6 for v in s["values"]]
             ax1.plot(times, mbps, label="WAN Subida / Tx (Mbps)", color="#00b0ff", linewidth=2.0)
             ax1.fill_between(times, mbps, color="#00b0ff", alpha=0.15)
@@ -156,7 +158,7 @@ def generate_router_chart(router: dict, window_minutes: int = 30, only_wan: bool
             if iface not in ifaces_seen:
                 ifaces_seen[iface] = IFACE_COLORS[color_idx % len(IFACE_COLORS)]
                 color_idx += 1
-            times = [datetime.fromtimestamp(float(v[0])) for v in s["values"]]
+            times = [timestamp_to_datetime(float(v[0])) for v in s["values"]]
             mbps = [float(v[1]) / 1e6 for v in s["values"]]
             c = ifaces_seen[iface]["rx"]
             ax1.plot(times, mbps, label=f"{iface} (Rx / In)", color=c, linewidth=1.8)
@@ -166,7 +168,7 @@ def generate_router_chart(router: dict, window_minutes: int = 30, only_wan: bool
             if iface not in ifaces_seen:
                 ifaces_seen[iface] = IFACE_COLORS[color_idx % len(IFACE_COLORS)]
                 color_idx += 1
-            times = [datetime.fromtimestamp(float(v[0])) for v in s["values"]]
+            times = [timestamp_to_datetime(float(v[0])) for v in s["values"]]
             mbps = [float(v[1]) / 1e6 for v in s["values"]]
             c = ifaces_seen[iface]["tx"]
             ax1.plot(times, mbps, label=f"{iface} (Tx / Out)", color=c, linewidth=1.8, linestyle="--")
@@ -185,7 +187,7 @@ def generate_router_chart(router: dict, window_minutes: int = 30, only_wan: bool
 
     # --- PANEL 2: CARGA DE CPU ---
     for s in series_cpu:
-        times = [datetime.fromtimestamp(float(v[0])) for v in s["values"]]
+        times = [timestamp_to_datetime(float(v[0])) for v in s["values"]]
         vals = [float(v[1]) for v in s["values"]]
         ax2.plot(times, vals, label="Carga de CPU (%)", color="#ff9100", linewidth=1.8)
         ax2.fill_between(times, vals, color="#ff9100", alpha=0.15)
@@ -199,7 +201,7 @@ def generate_router_chart(router: dict, window_minutes: int = 30, only_wan: bool
     has_temp = False
     for s in series_temp:
         sensor = s["metric"].get("sensor", "sensor")
-        times = [datetime.fromtimestamp(float(v[0])) for v in s["values"]]
+        times = [timestamp_to_datetime(float(v[0])) for v in s["values"]]
         vals = [float(v[1]) for v in s["values"]]
         c = SENSOR_COLORS.get(sensor, "#40c4ff")
         ax3.plot(times, vals, label=f"{sensor} (°C)", color=c, linewidth=1.6)
@@ -285,7 +287,7 @@ def build_router_caption(router: dict, stats: dict, only_wan: bool = True) -> st
     """Construye un mensaje explicativo y elegante en Markdown para acompañar la imagen."""
     r_id = router["id"]
     host = router["host"]
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = get_current_time_str()
 
     lineas_trafico = []
     if stats["traffic"]:

@@ -14,6 +14,27 @@ if not PROMETHEUS_URL:
     PROMETHEUS_URL = "http://prometheus:9090" if os.path.exists("/.dockerenv") else "http://localhost:9090"
 PROMETHEUS_URL = PROMETHEUS_URL.strip().rstrip("/")
 TELEGRAM_REPORT_INTERVAL_MINUTES = int(os.getenv("TELEGRAM_REPORT_INTERVAL_MINUTES", "0"))
+TIMEZONE_STR = os.getenv("TZ", os.getenv("TIMEZONE", "America/Caracas")).strip()
+
+try:
+    from zoneinfo import ZoneInfo
+    APP_TIMEZONE = ZoneInfo(TIMEZONE_STR)
+except Exception:
+    APP_TIMEZONE = None
+
+def get_current_time_str(fmt: str = "%Y-%m-%d %H:%M:%S") -> str:
+    """Retorna la fecha y hora actual en la zona horaria configurada."""
+    from datetime import datetime
+    if APP_TIMEZONE:
+        return datetime.now(APP_TIMEZONE).strftime(fmt)
+    return datetime.now().strftime(fmt)
+
+def timestamp_to_datetime(ts: float):
+    """Convierte un timestamp epoch a un objeto datetime en la zona horaria configurada."""
+    from datetime import datetime
+    if APP_TIMEZONE:
+        return datetime.fromtimestamp(ts, tz=APP_TIMEZONE)
+    return datetime.fromtimestamp(ts)
 
 def obtener_routers():
     """Lee dinámicamente cualquier ROUTER_<N>_* definido en el archivo .env."""

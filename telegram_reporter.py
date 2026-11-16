@@ -703,18 +703,17 @@ def start_report_scheduler(
         wait_min = wait_sec / 60.0
         logger.info(f"⏳ Próximo reporte periódico: {next_dt.strftime('%Y-%m-%d %H:%M:%S')} (en {wait_min:.1f} min)")
 
-        # Dormir en bloques pequeños de hasta 10 segundos para verificar reporte diario
-        while wait_sec > 0:
-            sleep_step = min(wait_sec, 10.0)
-            time.sleep(sleep_step)
-            check_and_send_daily_report(last_daily_sent)
-            _, wait_sec = calculate_next_report_time(
-                start_time_str=start_t,
-                end_time_str=end_t,
-                interval_minutes=interval,
-            )
-            if wait_sec <= 1.0:
+        # Esperar hasta alcanzar la hora objetivo del próximo reporte
+        while True:
+            now_dt = datetime.now(APP_TIMEZONE) if APP_TIMEZONE else datetime.now()
+            remaining_sec = (next_dt - now_dt).total_seconds()
+            if remaining_sec <= 0.5:
                 break
+
+            # Dormir en bloques pequeños de hasta 5 segundos para verificar reporte diario
+            sleep_step = min(remaining_sec, 5.0)
+            time.sleep(max(sleep_step, 0.2))
+            check_and_send_daily_report(last_daily_sent)
 
         logger.info(f"🚀 [HORARIO ALCANZADO] Enviando reporte periódico ({get_current_time_str()})...")
         try:
@@ -722,7 +721,8 @@ def start_report_scheduler(
         except Exception as err:
             logger.error(f"Error en envío programado: {err}")
 
-        time.sleep(5)
+        # Pausa de 3 segundos para asegurar que el reloj sobrepase el slot recién ejecutado
+        time.sleep(3)
 
 
 if __name__ == "__main__":

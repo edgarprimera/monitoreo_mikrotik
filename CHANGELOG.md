@@ -6,6 +6,15 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.5.1] - 2026-11-15
+
+### Corregido
+- **Bucle de Espera del Planificador de Reportes en Telegram:**
+  - Se corrigió un bloqueo en `start_report_scheduler` donde la recalculación dinámica del siguiente intervalo dentro del bucle de espera causaba que el planificador saltara la hora programada al cumplirse el plazo en lugar de disparar el reporte.
+  - Ahora se calcula una fecha/hora objetivo fija y se compara el tiempo restante de forma decreciente, garantizando el envío inmediato y exacto del reporte al alcanzar el segundo objetivo.
+
+---
+
 ## [1.5.0] - 2026-11-15
 
 ### Añadido

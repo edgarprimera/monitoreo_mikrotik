@@ -6,6 +6,18 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ---
 
+## [1.5.2] - 2026-11-15
+
+### Mejorado
+- **Ajustes Visuales y Temporales en Gráficas de Telegram:**
+  - **Ventana Adaptativa de Medición:** Ahora la ventana de tiempo a consultar y graficar se adapta automáticamente al intervalo configurado en `TELEGRAM_REPORT_INTERVAL_MINUTES` (ej. 60 min para reportes por hora en vez de fijarse en 30 min).
+  - Se agregó la variable opcional `TELEGRAM_REPORT_WINDOW_MINUTES` en `.env` para personalizar manualmente la ventana temporal si se desea.
+  - **Identificador de Tiempo Medido:** Se integró en la parte inferior de todas las gráficas (`ax3`) un rótulo nítido en color cyan neón que indica con exactitud el rango evaluado, fecha y zona horaria (ej. `Tiempo medido: 20:00 a 21:00 (15/11/2026) • Zona: America/Caracas`).
+  - **Títulos Claros:** Si la ventana es de 60 minutos, el encabezado muestra `Última 1 hora (60 min)` en lugar del formato anterior de 30 minutos.
+  - **Pie de Foto en Telegram:** El mensaje de acompañamiento ahora especifica la ventana evaluada (`⏱️ Ventana de Gráfica: Última 1 hora (60 min)`).
+
+---
+
 ## [1.5.1] - 2026-11-15
 
 ### Corregido

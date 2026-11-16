@@ -18,6 +18,7 @@ from config import (
     TELEGRAM_DAILY_CHAT_ID,
     PROMETHEUS_URL,
     TELEGRAM_REPORT_INTERVAL_MINUTES,
+    TELEGRAM_REPORT_WINDOW_MINUTES,
     TELEGRAM_REPORT_START_TIME,
     TELEGRAM_REPORT_END_TIME,
     TELEGRAM_DAILY_REPORT_TIME,
@@ -84,7 +85,7 @@ def query_prometheus_instant(query: str) -> list:
     return []
 
 
-def generate_router_chart(router: dict, window_minutes: int = 30, only_wan: bool = True) -> str:
+def generate_router_chart(router: dict, window_minutes: int = None, only_wan: bool = True) -> str:
     """
     Genera una gráfica completa de alta resolución para un router MikroTik.
     Por defecto se enfoca exclusivamente en la(s) interfaz(ces) WAN.
@@ -92,11 +93,23 @@ def generate_router_chart(router: dict, window_minutes: int = 30, only_wan: bool
       1. Tráfico WAN (Mbps Rx y Tx con sombreado de ancho de banda)
       2. Carga de CPU (%) con umbral crítico al 85%
       3. Temperaturas de hardware (°C)
+      4. Rango de tiempo medido y zona horaria en el pie de la gráfica
     """
+    if window_minutes is None:
+        window_minutes = TELEGRAM_REPORT_WINDOW_MINUTES
+
     r_id = router["id"]
     host = router["host"]
     now = time.time()
     start = now - (window_minutes * 60)
+
+    # Texto amigable para la ventana temporal en títulos
+    if window_minutes == 60:
+        window_title_str = "Última 1 hora (60 min)"
+    elif window_minutes % 60 == 0:
+        window_title_str = f"Últimas {window_minutes // 60} horas ({window_minutes} min)"
+    else:
+        window_title_str = f"Últimos {window_minutes} min"
 
     # Determinar qué interfaces graficar
     if only_wan and router.get("wan_interfaces"):
@@ -149,7 +162,7 @@ def generate_router_chart(router: dict, window_minutes: int = 30, only_wan: bool
             has_wan_tx = True
 
         ax1.set_title(
-            f"Router: {r_id}  |  Enlace WAN: {wan_name}  |  Últimos {window_minutes} min",
+            f"Router: {r_id}  |  Enlace WAN: {wan_name}  |  {window_title_str}",
             color="#ffffff",
             fontsize=12,
             fontweight="bold",
@@ -182,7 +195,7 @@ def generate_router_chart(router: dict, window_minutes: int = 30, only_wan: bool
 
         wan_label = "Enlaces WAN" if is_wan_mode else "Interfaces Monitoreadas"
         ax1.set_title(
-            f"Router: {r_id}  |  {wan_label}: {', '.join(target_ifaces)}  |  Últimos {window_minutes} min",
+            f"Router: {r_id}  |  {wan_label}: {', '.join(target_ifaces)}  |  {window_title_str}",
             color="#ffffff",
             fontsize=12,
             fontweight="bold",
@@ -190,7 +203,9 @@ def generate_router_chart(router: dict, window_minutes: int = 30, only_wan: bool
         )
 
     ax1.set_ylabel("Tráfico (Mbps)", color="#ffffff", fontsize=9, fontweight="bold")
-    ax1.legend(loc="upper right", facecolor="#181b1f", edgecolor="#3c4352", labelcolor="#ffffff", fontsize=8)
+    h1, l1 = ax1.get_legend_handles_labels()
+    if h1:
+        ax1.legend(loc="upper right", facecolor="#181b1f", edgecolor="#3c4352", labelcolor="#ffffff", fontsize=8)
 
     # --- PANEL 2: CARGA DE CPU ---
     for s in series_cpu:
@@ -222,6 +237,26 @@ def generate_router_chart(router: dict, window_minutes: int = 30, only_wan: bool
     ax3.set_ylabel("Temperatura (°C)", color="#ffffff", fontsize=9, fontweight="bold")
     ax3.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
     ax3.legend(loc="upper right", facecolor="#181b1f", edgecolor="#3c4352", labelcolor="#ffffff", fontsize=8, ncol=3)
+
+    # Pie de gráfica con el rango exacto de tiempo medido y zona horaria
+    start_dt = timestamp_to_datetime(start)
+    end_dt = timestamp_to_datetime(now)
+    start_str = start_dt.strftime("%H:%M")
+    end_str = end_dt.strftime("%H:%M")
+    tz_name = getattr(APP_TIMEZONE, "key", "America/Caracas")
+
+    if start_dt.date() == end_dt.date():
+        periodo_str = f"Tiempo medido: {start_str} a {end_str} ({start_dt.strftime('%d/%m/%Y')})  •  Zona: {tz_name}"
+    else:
+        periodo_str = f"Tiempo medido: {start_dt.strftime('%d/%m %H:%M')} a {end_dt.strftime('%d/%m %H:%M')}  •  Zona: {tz_name}"
+
+    ax3.set_xlabel(
+        periodo_str,
+        color="#00e5ff",
+        fontsize=9.5,
+        fontweight="bold",
+        labelpad=8,
+    )
 
     plt.tight_layout()
 
@@ -290,11 +325,19 @@ def get_current_router_stats(r_id: str, target_ifaces: list = None) -> dict:
     return stats
 
 
-def build_router_caption(router: dict, stats: dict, only_wan: bool = True) -> str:
+def build_router_caption(router: dict, stats: dict, only_wan: bool = True, window_minutes: int = None) -> str:
     """Construye un mensaje explicativo y elegante en Markdown para acompañar la imagen."""
     r_id = router["id"]
     host = router["host"]
     now_str = get_current_time_str()
+    w_min = window_minutes if window_minutes is not None else TELEGRAM_REPORT_WINDOW_MINUTES
+
+    if w_min == 60:
+        ventana_txt = "Última 1 hora (60 min)"
+    elif w_min % 60 == 0:
+        ventana_txt = f"Últimas {w_min // 60} horas ({w_min} min)"
+    else:
+        ventana_txt = f"Últimos {w_min} min"
 
     lineas_trafico = []
     if stats["traffic"]:
@@ -309,6 +352,7 @@ def build_router_caption(router: dict, stats: dict, only_wan: bool = True) -> st
     caption = (
         f"📊 *REPORTE DE ESTADO {tipo_reporte} - {r_id}*\n"
         f"🌐 *Host:* `{host}`\n"
+        f"⏱️ *Ventana de Gráfica:* `{ventana_txt}`\n"
         f"⚡ *CPU:* `{stats['cpu_load']}%` | 💾 *RAM:* `{stats['mem_percent']}%`\n"
         f"🌡️ *Temp CPU:* `{stats['cpu_temp']}` | *Placa:* `{stats['board_temp']}`\n"
         f"{titulo_trafico}\n"
@@ -460,6 +504,18 @@ def generate_daily_24h_chart(router: dict) -> tuple[str, dict]:
     ax3.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M\n%d-%b"))
     ax3.legend(loc="upper right", facecolor="#181b1f", edgecolor="#3c4352", labelcolor="#ffffff", fontsize=8, ncol=3)
 
+    # Pie de gráfica con el rango exacto de 24 horas y zona horaria
+    start_dt = timestamp_to_datetime(start)
+    end_dt = timestamp_to_datetime(now)
+    tz_name = getattr(APP_TIMEZONE, "key", "America/Caracas")
+    ax3.set_xlabel(
+        f"Período evaluado (24 Horas): {start_dt.strftime('%d/%m/%Y %H:%M')} a {end_dt.strftime('%d/%m/%Y %H:%M')}  •  Zona: {tz_name}",
+        color="#00e5ff",
+        fontsize=9.5,
+        fontweight="bold",
+        labelpad=8,
+    )
+
     plt.tight_layout()
     image_filename = f"{r_id}_24H.png"
     image_path = os.path.join(OUTPUT_DIR, image_filename)
@@ -528,8 +584,11 @@ def run_daily_report(target_router: str = None) -> None:
     logger.info(f"Finalizado Reporte Diario 24h: {generados} generadas, {enviados} enviadas a {dest_chat}.")
 
 
-def run_report(target_router: str = None, window_minutes: int = 30, only_wan: bool = True):
+def run_report(target_router: str = None, window_minutes: int = None, only_wan: bool = True):
     """Ejecuta el ciclo de reporte generando y enviando una imagen por router."""
+    if window_minutes is None:
+        window_minutes = TELEGRAM_REPORT_WINDOW_MINUTES
+
     routers = obtener_routers()
     if not routers:
         logger.warning("No se encontraron routers configurados en el archivo .env.")
@@ -552,7 +611,7 @@ def run_report(target_router: str = None, window_minutes: int = 30, only_wan: bo
         try:
             image_path = generate_router_chart(router, window_minutes=window_minutes, only_wan=only_wan)
             stats = get_current_router_stats(r_id, target_ifaces=target_ifaces)
-            caption = build_router_caption(router, stats, only_wan=only_wan)
+            caption = build_router_caption(router, stats, only_wan=only_wan, window_minutes=window_minutes)
 
             enviado = send_telegram_photo(image_path, caption)
             generados += 1
@@ -660,7 +719,7 @@ def check_and_send_daily_report(last_daily_sent_date: list):
 
 def start_report_scheduler(
     target_router: str = None,
-    window_minutes: int = 30,
+    window_minutes: int = None,
     only_wan: bool = True,
     interval_minutes: int = None,
     start_time_str: str = None,
@@ -670,6 +729,9 @@ def start_report_scheduler(
     Bucle planificador inteligente para envío periódico de gráficas.
     Gestiona tanto los reportes periódicos como el reporte diario de 24h al canal de Telegram.
     """
+    if window_minutes is None:
+        window_minutes = TELEGRAM_REPORT_WINDOW_MINUTES
+
     interval = interval_minutes if interval_minutes is not None else TELEGRAM_REPORT_INTERVAL_MINUTES
     start_t = start_time_str if start_time_str is not None else TELEGRAM_REPORT_START_TIME
     end_t = end_time_str if end_time_str is not None else TELEGRAM_REPORT_END_TIME
@@ -679,6 +741,7 @@ def start_report_scheduler(
     logger.info("📅 INICIANDO PLANIFICADOR PROGRAMADO DE TELEGRAM")
     logger.info(f"   • Zona Horaria: {tz_name}")
     logger.info(f"   • Reportes Periódicos: Cada {interval} min (Inicio: {start_t or 'Inmediato'}, Fin: {end_t or '24h'})")
+    logger.info(f"   • Ventana de Gráficas: {window_minutes} min")
     logger.info(f"   • Destino Periódico: {TELEGRAM_CHAT_ID or 'No configurado'}")
     logger.info(f"   • Reporte Diario 24h: {TELEGRAM_DAILY_REPORT_TIME or 'Desactivado'}")
     logger.info(f"   • Destino Canal 24h: {TELEGRAM_DAILY_CHAT_ID or TELEGRAM_CHAT_ID or 'No configurado'}")
@@ -728,7 +791,7 @@ def start_report_scheduler(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generador y emisor de gráficas MikroTik por router para Telegram.")
     parser.add_argument("--router", type=str, default=None, help="Nombre o ID del router específico (opcional)")
-    parser.add_argument("--window", type=int, default=30, help="Ventana de tiempo en minutos (default: 30)")
+    parser.add_argument("--window", type=int, default=None, help=f"Ventana de tiempo en minutos (default: {TELEGRAM_REPORT_WINDOW_MINUTES} min según intervalo o .env)")
     parser.add_argument("--interval", type=int, default=None, help="Minutos entre cada reporte (ej: 60)")
     parser.add_argument("--start", type=str, default=None, help="Hora de inicio en formato HH:MM (ej: 08:00)")
     parser.add_argument("--end", type=str, default=None, help="Hora de fin en formato HH:MM (ej: 22:00)")

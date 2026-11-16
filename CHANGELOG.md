@@ -15,6 +15,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - **Identificador de Tiempo Medido:** Se integró en la parte inferior de todas las gráficas (`ax3`) un rótulo nítido en color cyan neón que indica con exactitud el rango evaluado, fecha y zona horaria (ej. `Tiempo medido: 20:00 a 21:00 (15/11/2026) • Zona: America/Caracas`).
   - **Títulos Claros:** Si la ventana es de 60 minutos, el encabezado muestra `Última 1 hora (60 min)` en lugar del formato anterior de 30 minutos.
   - **Pie de Foto en Telegram:** El mensaje de acompañamiento ahora especifica la ventana evaluada (`⏱️ Ventana de Gráfica: Última 1 hora (60 min)`).
+  - **Ejecución Inmediata Bajo Demanda (CLI):** Ejecutar `python telegram_reporter.py` o con `--window 60` ahora genera y envía el reporte **inmediatamente** para pruebas y vistas instantáneas, reservando el planificador en bucle únicamente para cuando se pasa el argumento explícito `--schedule`.
 
 ---
 

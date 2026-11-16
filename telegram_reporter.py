@@ -804,7 +804,7 @@ if __name__ == "__main__":
 
     if args.daily:
         run_daily_report(target_router=args.router)
-    elif args.schedule or (args.interval and args.interval > 0) or TELEGRAM_DAILY_REPORT_TIME:
+    elif args.schedule:
         start_report_scheduler(
             target_router=args.router,
             window_minutes=args.window,
@@ -814,4 +814,5 @@ if __name__ == "__main__":
             end_time_str=args.end,
         )
     else:
+        # Por defecto ejecución inmediata (ideal para pruebas y envíos manuales bajo demanda)
         run_report(target_router=args.router, window_minutes=args.window, only_wan=only_wan_mode)

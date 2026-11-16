@@ -235,7 +235,7 @@ def generate_router_chart(router: dict, window_minutes: int = None, only_wan: bo
 
     ax3.axhline(75, color="#ff5252", linestyle=":", linewidth=1.2, label="Límite Térmico (75°C)")
     ax3.set_ylabel("Temperatura (°C)", color="#ffffff", fontsize=9, fontweight="bold")
-    ax3.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M", tz=APP_TIMEZONE))
     ax3.legend(loc="upper right", facecolor="#181b1f", edgecolor="#3c4352", labelcolor="#ffffff", fontsize=8, ncol=3)
 
     # Pie de gráfica con el rango exacto de tiempo medido y zona horaria
@@ -501,7 +501,7 @@ def generate_daily_24h_chart(router: dict) -> tuple[str, dict]:
 
     ax3.axhline(75, color="#ff5252", linestyle=":", linewidth=1.2, label="Límite Térmico (75°C)")
     ax3.set_ylabel("Temperatura (°C)", color="#ffffff", fontsize=9, fontweight="bold")
-    ax3.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M\n%d-%b"))
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M\n%d-%b", tz=APP_TIMEZONE))
     ax3.legend(loc="upper right", facecolor="#181b1f", edgecolor="#3c4352", labelcolor="#ffffff", fontsize=8, ncol=3)
 
     # Pie de gráfica con el rango exacto de 24 horas y zona horaria
